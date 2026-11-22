@@ -1,0 +1,2887 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen & Laporan Service HP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        };
+        (function() {
+            try {
+                var savedTheme = localStorage.getItem('service_hp_theme_v3');
+                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                    document.documentElement.classList.add('dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        html.dark ::-webkit-scrollbar-thumb { background: #334155; }
+        html.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Optimalisasi responsivitas sentuhan keypad PIN */
+        #pin-keypad-grid, .pin-key, #pin-clear, #pin-backspace {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        .pin-key-pressed {
+            transform: scale(0.92) !important;
+            background-color: #2563eb !important;
+            color: #ffffff !important;
+        }
+
+        @keyframes pinShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-pin-shake {
+            animation: pinShake 0.32s ease-in-out;
+        }
+
+        /* Penyesuaian otomatis Mode Gelap (Dark Mode) */
+        html.dark body { background-color: #020617; color: #f1f5f9; }
+        html.dark header { background-color: rgba(15, 23, 42, 0.9); border-color: #1e293b; }
+        html.dark #bottom-nav-bar { background-color: rgba(15, 23, 42, 0.95); border-color: #1e293b; }
+        html.dark .bg-white { background-color: #0f172a !important; }
+        html.dark .bg-white\/95 { background-color: rgba(15, 23, 42, 0.95) !important; }
+        html.dark .bg-slate-50 { background-color: #1e293b !important; }
+        html.dark .bg-slate-50\/70 { background-color: rgba(30, 41, 59, 0.7) !important; }
+        html.dark .bg-slate-100 { background-color: #1e293b !important; }
+        html.dark .border-slate-100,
+        html.dark .border-slate-200,
+        html.dark .border-slate-300 { border-color: #334155 !important; }
+        html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1e293b !important; }
+        html.dark .text-slate-900,
+        html.dark .text-slate-800 { color: #f8fafc !important; }
+        html.dark .text-slate-700,
+        html.dark .text-slate-600 { color: #cbd5e1 !important; }
+        html.dark .text-slate-500,
+        html.dark .text-slate-400 { color: #94a3b8 !important; }
+        html.dark input,
+        html.dark select,
+        html.dark textarea {
+            background-color: #020617 !important;
+            color: #f8fafc !important;
+            border-color: #334155 !important;
+        }
+        html.dark .hover\:bg-slate-50\/80:hover,
+        html.dark .hover\:bg-slate-50\/90:hover,
+        html.dark .hover\:bg-slate-200:hover { background-color: #334155 !important; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #nota-print-area, #nota-print-area * { visibility: visible; }
+            #nota-print-area {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 16px;
+                background: #ffffff !important;
+                color: #000000 !important;
+                box-shadow: none !important;
+            }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- ==================== 1. LAYAR PENDAFTARAN / HUBUNGKAN TOKO ==================== -->
+    <div id="onboarding-screen" class="relative min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900">
+        <button type="button" title="Ganti Mode Gelap / Terang" class="btn-theme-toggle absolute top-4 right-4 p-2.5 rounded-2xl bg-white/15 hover:bg-white/25 text-white backdrop-blur-md border border-white/20 transition cursor-pointer">
+            <svg class="theme-icon-sun hidden w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg class="theme-icon-moon w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+        </button>
+        <div class="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+            <div class="p-6 sm:p-8 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-center">
+                <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/25">
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                        <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                    </svg>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Setup Aplikasi Service HP</h1>
+                <p class="text-xs sm:text-sm text-blue-100 mt-1">Daftarkan profil konter Anda atau hubungkan database Google Sheets yang sudah ada.</p>
+            </div>
+
+            <div class="grid grid-cols-2 border-b border-slate-200 bg-slate-50 p-1.5 gap-1.5">
+                <button type="button" id="tab-onboard-new" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold bg-white text-blue-600 shadow-sm transition cursor-pointer">
+                    Daftar Toko Baru
+                </button>
+                <button type="button" id="tab-onboard-connect" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                    Sudah Punya Link Database
+                </button>
+            </div>
+
+            <form id="form-register-store" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Toko / Konter *</label>
+                        <input type="text" id="reg-name" required placeholder="Contoh: Berkah Cell" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Buat PIN Keamanan (4-6 Angka) *</label>
+                        <input type="password" id="reg-pin" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" required placeholder="Contoh: 1234" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">No. WhatsApp Toko *</label>
+                        <input type="tel" id="reg-phone" required placeholder="081234567890" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Pemilik / Admin</label>
+                        <input type="text" id="reg-admin" placeholder="Nama Admin" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Slogan Konter</label>
+                    <input type="text" id="reg-tagline" placeholder="Spesialis Service HP & Sparepart Bergaransi" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Alamat Lengkap Toko</label>
+                    <input type="text" id="reg-address" placeholder="Jl. Raya Utama No. 10" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Link Web App Google Apps Script (Opsional untuk GitHub)</label>
+                    <input type="url" id="reg-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <p class="text-[11px] text-slate-500 mt-1">Tempel URL Web App dari Google Apps Script agar seluruh data tersimpan online di Google Sheets.</p>
+                </div>
+
+                <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-lg shadow-blue-600/25 transition cursor-pointer">
+                    Simpan & Mulai Gunakan Aplikasi
+                </button>
+            </form>
+
+            <form id="form-connect-existing" class="hidden p-6 space-y-4">
+                <div class="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-800 leading-relaxed">
+                    Masukkan <strong>Link Web App Google Apps Script</strong> toko Anda untuk menarik kembali profil toko, PIN keamanan, dan seluruh riwayat service secara online.
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Link Web App Google Apps Script *</label>
+                    <input type="url" id="connect-url" required placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <button type="submit" id="btn-connect-submit" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-lg shadow-emerald-600/25 transition cursor-pointer">
+                    Tarik Data Toko dari Google Sheets
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== 2. LAYAR KUNCI PIN TOKO ==================== -->
+    <div id="pin-lock-screen" class="hidden relative min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950">
+        <button type="button" title="Ganti Mode Gelap / Terang" class="btn-theme-toggle absolute top-4 right-4 p-2.5 rounded-2xl bg-white/15 hover:bg-white/25 text-white backdrop-blur-md border border-white/20 transition cursor-pointer">
+            <svg class="theme-icon-sun hidden w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <svg class="theme-icon-moon w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+        </button>
+
+        <div id="pin-card" class="w-full max-w-sm bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 text-center border border-white/20">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg overflow-hidden border border-slate-200">
+                <img id="pin-screen-avatar" src="" alt="Foto Toko" class="hidden w-full h-full object-cover">
+                <svg id="pin-screen-icon" class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            <h2 id="pin-store-title" class="text-lg font-bold text-slate-900">Masukkan PIN Toko</h2>
+            <p class="text-xs text-slate-500 mt-1">Masukkan PIN keamanan untuk membuka aplikasi</p>
+            <p id="pin-length-hint" class="text-[11px] font-semibold text-blue-600 mt-1">PIN 4 digit</p>
+
+            <div id="pin-dots" class="flex justify-center gap-3 my-5">
+                <span class="w-3.5 h-3.5 rounded-full border-2 border-slate-300 transition-all"></span>
+                <span class="w-3.5 h-3.5 rounded-full border-2 border-slate-300 transition-all"></span>
+                <span class="w-3.5 h-3.5 rounded-full border-2 border-slate-300 transition-all"></span>
+                <span class="w-3.5 h-3.5 rounded-full border-2 border-slate-300 transition-all"></span>
+                <span class="w-3.5 h-3.5 rounded-full border-2 border-slate-300 transition-all"></span>
+                <span class="w-3.5 h-3.5 rounded-full border-2 border-slate-300 transition-all"></span>
+            </div>
+
+            <p id="pin-error" class="hidden text-xs font-medium text-rose-600 bg-rose-50 py-2 px-3 rounded-xl mb-4">PIN salah, silakan coba lagi.</p>
+
+            <div id="pin-keypad-grid" class="grid grid-cols-3 gap-2.5 max-w-[260px] mx-auto select-none">
+                <button type="button" data-key="1" class="pin-key py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800 transition-transform duration-75 cursor-pointer">1</button>
+                <button type="button" data-key="2" class="pin-key py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800 transition-transform duration-75 cursor-pointer">2</button>
+                <button type="button" data-key="3" class="pin-key py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800 transition-transform duration-75 cursor-pointer">3</button>
+                <button type="button" data-key="4" class="pin-key py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800 transition-transform duration-75 cursor-pointer">4</button>
+                <button type="button" data-key="5" class="pin-key py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800 transition-transform duration-75 cursor-pointer">5</button>
+                <button type="button" data-key="6" class="pin-key py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800 transition-transform duration-75 cursor-pointer">6</button>
+                <button type="button" data-key="7" class="pin-key py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800 transition-transform duration-75 cursor-pointer">7</button>
+                <button type="button" data-key="8" class="pin-key py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800 transition-transform duration-75 cursor-pointer">8</button>
+                <button type="button" data-key="9" class="pin-key py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800 transition-transform duration-75 cursor-pointer">9</button>
+                <button type="button" id="pin-clear" data-pin-action="clear" class="py-3.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-600 transition-transform duration-75 cursor-pointer">Hapus</button>
+                <button type="button" data-key="0" class="pin-key py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-lg font-bold text-slate-800 transition-transform duration-75 cursor-pointer">0</button>
+                <button type="button" id="pin-backspace" data-pin-action="backspace" class="py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 transition-transform duration-75 cursor-pointer" aria-label="Hapus satu digit">
+                    <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+                        <line x1="18" y1="9" x2="12" y2="15"></line>
+                        <line x1="12" y1="9" x2="18" y2="15"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <button type="button" id="btn-reset-onboarding" class="mt-6 text-[11px] text-slate-400 hover:text-blue-600 underline transition cursor-pointer">
+                Ganti Toko / Hubungkan Ulang Database
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== 3. WORKSPACE UTAMA APLIKASI ==================== -->
+    <div id="app-workspace" class="hidden flex-1 flex flex-col pb-24">
+        <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0 overflow-hidden border border-slate-200">
+                        <img id="header-store-avatar" src="" alt="Foto Toko" class="hidden w-full h-full object-cover">
+                        <svg id="header-store-icon" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <h1 id="header-store-name" class="font-bold text-sm sm:text-base text-slate-900 truncate">Nama Toko</h1>
+                        <p id="header-store-tagline" class="text-[11px] text-slate-500 truncate">Manajemen Service HP</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                    <div id="db-status-badge" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span id="db-status-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span id="db-status-text">Online</span>
+                    </div>
+
+                    <button type="button" id="btn-toggle-theme" title="Mode Gelap / Terang" class="btn-theme-toggle p-2.5 rounded-xl bg-slate-100 hover:bg-amber-50 dark:hover:bg-slate-800 text-slate-700 hover:text-amber-600 transition cursor-pointer">
+                        <svg class="theme-icon-sun hidden w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <svg class="theme-icon-moon w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
+
+                    <button type="button" id="btn-sync-now" title="Sinkronisasi dengan Google Sheets" class="p-2.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </button>
+
+                    <button type="button" id="btn-lock-app" title="Kunci Layar (PIN)" class="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Banner Rasio 1280 x 400 dengan Bingkai Border Elegan -->
+        <div id="dashboard-banner-card" class="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-5 select-none">
+            <div class="p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-blue-500/25 via-indigo-500/20 to-slate-300/60 dark:from-blue-500/30 dark:via-indigo-500/25 dark:to-slate-700/70 shadow-lg shadow-slate-900/10 dark:shadow-black/40 border border-slate-300/90 dark:border-slate-700/90">
+                <div class="relative w-full aspect-[16/5] max-h-[400px] overflow-hidden rounded-xl sm:rounded-2xl border-2 border-white/90 dark:border-slate-800 bg-slate-900 ring-1 ring-slate-900/10 dark:ring-white/10">
+                    <img id="dashboard-banner-bg" src="" alt="" aria-hidden="true" class="hidden absolute inset-0 w-full h-full object-cover blur-2xl scale-110 brightness-75 saturate-125 transition-opacity duration-300">
+                    <div id="dashboard-banner-vignette" class="hidden absolute inset-0 z-[5] pointer-events-none bg-gradient-to-b from-black/10 via-transparent to-black/15"></div>
+                    <img id="dashboard-banner-img" src="" alt="Banner Toko" class="hidden relative z-10 w-full h-full object-cover object-center transition-all duration-300">
+                    <div id="dashboard-banner-empty" class="relative w-full h-full bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 overflow-hidden">
+                        <div class="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-blue-500/20 blur-3xl"></div>
+                        <div class="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-indigo-500/20 blur-3xl"></div>
+                        <div class="absolute inset-0 opacity-15" style="background-image: radial-gradient(#93c5fd 1px, transparent 1px); background-size: 24px 24px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 flex-1">
+
+            <!-- ==================== TAB 1: DASHBOARD ==================== -->
+            <section id="view-dashboard" class="space-y-6">
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-medium text-slate-500">Total Unit Masuk</p>
+                        <p id="kpi-total" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+                        <span class="inline-block mt-1.5 text-[11px] text-slate-400">Semua riwayat</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-medium text-slate-500">Dalam Proses</p>
+                        <p id="kpi-process" class="text-2xl font-bold text-amber-600 mt-1">0</p>
+                        <span class="inline-block mt-1.5 text-[11px] text-amber-600/80">Antrian & dikerjakan</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-medium text-slate-500">Selesai / Siap Ambil</p>
+                        <p id="kpi-ready" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+                        <span class="inline-block mt-1.5 text-[11px] text-emerald-600/80">Unit tuntas</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-medium text-slate-500">Total Omzet</p>
+                        <p id="kpi-revenue" class="text-lg sm:text-xl font-bold text-blue-600 mt-1">Rp 0</p>
+                        <span class="inline-block mt-1.5 text-[11px] text-slate-400">Pendapatan kotor</span>
+                    </div>
+                    <div class="col-span-2 lg:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-700 p-4 rounded-2xl text-white shadow-md">
+                        <p class="text-xs font-medium text-blue-100">Estimasi Laba Bersih</p>
+                        <p id="kpi-profit" class="text-xl sm:text-2xl font-bold mt-1">Rp 0</p>
+                        <span class="inline-block mt-1.5 text-[11px] text-blue-100">Omzet - Modal Part</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h2 class="font-bold text-slate-900 text-base">Distribusi Status Pengerjaan</h2>
+                            <p class="text-xs text-slate-500 mb-4">Ringkasan kondisi unit service saat ini</p>
+                        </div>
+                        <div class="relative h-52 w-full flex items-center justify-center">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                        <div id="status-legend-list" class="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs"></div>
+                    </div>
+
+                    <div class="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                        <div class="flex items-center justify-between gap-2 mb-4">
+                            <div>
+                                <h2 class="font-bold text-slate-900 text-base">Service Terbaru</h2>
+                                <p class="text-xs text-slate-500">5 transaksi masuk terakhir</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="btn-dash-add" class="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition cursor-pointer">
+                                    + Input Baru
+                                </button>
+                                <button type="button" id="btn-dash-all" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer">
+                                    Semua
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-slate-500 text-[11px] uppercase">
+                                        <th class="py-2.5 px-2">Nota & Pelanggan</th>
+                                        <th class="py-2.5 px-2">Perangkat</th>
+                                        <th class="py-2.5 px-2">Biaya</th>
+                                        <th class="py-2.5 px-2 text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-services-body" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== TAB 2: DATA SERVICE & UANG KAS ==================== -->
+            <section id="view-services" class="hidden space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Data Service & Uang Kas</h2>
+                        <p class="text-xs text-slate-500">Kelola antrian service, pemasukan kas, pengeluaran kas harian, dan cetak nota pelanggan.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" id="btn-add-cash-in" class="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                            <span>+ Pemasukan Kas</span>
+                        </button>
+                        <button type="button" id="btn-add-expense" class="px-3.5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold shadow-md shadow-rose-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                            <span>- Pengeluaran Kas</span>
+                        </button>
+                        <button type="button" id="btn-add-service" class="px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-md shadow-blue-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                            <span>+ Data Service</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ringkasan Nominal Uang Kas, Pemasukan, Pengeluaran & Sisa Uang Kas -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-xs font-medium text-slate-500">Modal Kas Awal</p>
+                                <button type="button" id="btn-set-initial-cash" class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 text-[11px] font-semibold transition cursor-pointer">
+                                    Atur
+                                </button>
+                            </div>
+                            <p id="kas-initial-val" class="text-xl font-bold text-slate-800 mt-1">Rp 0</p>
+                        </div>
+                        <span class="inline-block mt-1.5 text-[11px] text-slate-400">Saldo modal awal laci kas</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-slate-500">Pemasukan Uang Kas</p>
+                            <p id="kas-total-in" class="text-xl font-bold text-blue-600 mt-1">Rp 0</p>
+                        </div>
+                        <span id="kas-initial-breakdown" class="inline-block mt-1.5 text-[11px] text-slate-400">Modal awal + pemasukan kas</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-slate-500">Pengeluaran Uang Kas</p>
+                            <p id="kas-total-out" class="text-xl font-bold text-rose-600 mt-1">Rp 0</p>
+                        </div>
+                        <span class="inline-block mt-1.5 text-[11px] text-slate-400">Operasional, part & belanja</span>
+                    </div>
+                    <div class="bg-gradient-to-br from-emerald-600 to-teal-700 p-4 rounded-2xl text-white shadow-md flex flex-col justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-emerald-100">Sisa Uang Kas</p>
+                            <p id="kas-balance" class="text-xl sm:text-2xl font-bold mt-1">Rp 0</p>
+                        </div>
+                        <span class="inline-block mt-1.5 text-[11px] text-emerald-100">Total Uang Kas - Pengeluaran</span>
+                    </div>
+                </div>
+
+                <!-- Riwayat Pemasukan & Pengeluaran Uang Kas -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Riwayat Pemasukan Kas -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-4 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-900">Riwayat Pemasukan Uang Kas</h3>
+                                <p class="text-[11px] text-slate-500">Penambahan kas (terpisah dari nota service)</p>
+                            </div>
+                            <span id="cashin-count-badge" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">0 Catatan</span>
+                        </div>
+                        <div class="overflow-x-auto max-h-60">
+                            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50/70 border-b border-slate-200 text-slate-600 text-[11px] uppercase">
+                                        <th class="py-2.5 px-3">Tanggal</th>
+                                        <th class="py-2.5 px-3">Sumber / Kategori</th>
+                                        <th class="py-2.5 px-3">Keterangan</th>
+                                        <th class="py-2.5 px-3 text-right">Nominal</th>
+                                        <th class="py-2.5 px-3 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cashin-table-body" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <div id="cashin-empty-state" class="p-6 text-center text-slate-400 text-xs">
+                            Belum ada catatan pemasukan uang kas.
+                        </div>
+                    </div>
+
+                    <!-- Riwayat Pengeluaran Uang Kas -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-4 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-900">Riwayat Pengeluaran Uang Kas</h3>
+                                <p class="text-[11px] text-slate-500">Tersimpan otomatis ke database Google Sheets</p>
+                            </div>
+                            <span id="expense-count-badge" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-600 border border-rose-200">0 Catatan</span>
+                        </div>
+                        <div class="overflow-x-auto max-h-60">
+                            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50/70 border-b border-slate-200 text-slate-600 text-[11px] uppercase">
+                                        <th class="py-2.5 px-3">Tanggal</th>
+                                        <th class="py-2.5 px-3">Kategori</th>
+                                        <th class="py-2.5 px-3">Keterangan</th>
+                                        <th class="py-2.5 px-3 text-right">Nominal</th>
+                                        <th class="py-2.5 px-3 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenses-table-body" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <div id="expenses-empty-state" class="p-6 text-center text-slate-400 text-xs">
+                            Belum ada catatan pengeluaran uang kas.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="sm:col-span-6">
+                        <input type="text" id="search-service" placeholder="Cari No. Nota, Nama Pelanggan, HP, atau IMEI..." class="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <select id="filter-status" class="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="ALL">Semua Status</option>
+                            <option value="Antrian">Antrian</option>
+                            <option value="Proses">Proses</option>
+                            <option value="Menunggu Part">Menunggu Part</option>
+                            <option value="Selesai">Selesai</option>
+                            <option value="Diambil">Diambil</option>
+                            <option value="Batal">Batal</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-3">
+                        <select id="filter-tech" class="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="ALL">Semua Teknisi</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-[11px] uppercase tracking-wider">
+                                    <th class="py-3.5 px-4">Nota / Tgl</th>
+                                    <th class="py-3.5 px-4">Pelanggan & WA</th>
+                                    <th class="py-3.5 px-4">Unit & Keluhan</th>
+                                    <th class="py-3.5 px-4">Teknisi</th>
+                                    <th class="py-3.5 px-4">Biaya & Laba</th>
+                                    <th class="py-3.5 px-4">Status</th>
+                                    <th class="py-3.5 px-4 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="services-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div id="services-empty-state" class="hidden p-10 text-center text-slate-400 text-sm">
+                        Belum ada data service yang sesuai dengan filter.
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== TAB 3: LAPORAN KEUANGAN ==================== -->
+            <section id="view-reports" class="hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Laporan Keuangan & Performa</h2>
+                        <p class="text-xs text-slate-500">Analisis omzet, modal sparepart, laba bersih, arus uang kas, dan performa teknisi.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="month" id="report-month-filter" class="px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <button type="button" id="btn-export-csv" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition cursor-pointer">
+                            Ekspor Excel (CSV)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs text-slate-500">Total Transaksi</p>
+                        <p id="rep-count" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs text-slate-500">Total Omzet</p>
+                        <p id="rep-revenue" class="text-xl font-bold text-blue-600 mt-1">Rp 0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs text-slate-500">Modal Sparepart</p>
+                        <p id="rep-parts" class="text-xl font-bold text-rose-600 mt-1">Rp 0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs text-slate-500">Laba Bersih</p>
+                        <p id="rep-profit" class="text-xl font-bold text-emerald-600 mt-1">Rp 0</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-slate-900 text-base mb-1">Perbandingan Omzet, Modal & Laba</h3>
+                        <p class="text-xs text-slate-500 mb-4">Visualisasi keuangan berdasarkan periode terpilih</p>
+                        <div class="relative h-64 w-full">
+                            <canvas id="financeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-slate-900 text-base mb-1">Performa Teknisi</h3>
+                        <p class="text-xs text-slate-500 mb-4">Jumlah unit ditangani & total omzet per teknisi</p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-slate-500 text-[11px] uppercase">
+                                        <th class="py-2 px-2">Teknisi</th>
+                                        <th class="py-2 px-2 text-center">Unit</th>
+                                        <th class="py-2 px-2 text-right">Laba</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tech-report-body" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Laporan Arus Uang Kas (Pemasukan & Pengeluaran Kas) -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base">Laporan Pemasukan & Pengeluaran Uang Kas</h3>
+                            <p class="text-xs text-slate-500">Rekap arus kas terpisah dari omzet service berdasarkan periode terpilih</p>
+                        </div>
+                        <button type="button" id="btn-export-cash-csv" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition cursor-pointer w-fit">
+                            Ekspor Laporan Kas (CSV)
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                            <p class="text-[11px] font-medium text-slate-500">Modal Kas Awal</p>
+                            <p id="rep-kas-initial" class="text-base sm:text-lg font-bold text-slate-800 mt-1">Rp 0</p>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200">
+                            <p class="text-[11px] font-medium text-emerald-700">Pemasukan Uang Kas</p>
+                            <p id="rep-kas-in" class="text-base sm:text-lg font-bold text-emerald-700 mt-1">Rp 0</p>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200">
+                            <p class="text-[11px] font-medium text-rose-700">Pengeluaran Uang Kas</p>
+                            <p id="rep-kas-out" class="text-base sm:text-lg font-bold text-rose-700 mt-1">Rp 0</p>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200">
+                            <p class="text-[11px] font-medium text-blue-700">Sisa Saldo Kas</p>
+                            <p id="rep-kas-balance" class="text-base sm:text-lg font-bold text-blue-700 mt-1">Rp 0</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <!-- Tabel Laporan Pemasukan Uang Kas -->
+                        <div class="border border-slate-200 rounded-2xl overflow-hidden">
+                            <div class="px-4 py-2.5 bg-emerald-50/80 border-b border-slate-200 flex items-center justify-between">
+                                <span class="text-xs font-bold text-emerald-800">Rincian Pemasukan Uang Kas</span>
+                                <span id="rep-cashin-count" class="text-[11px] font-semibold text-emerald-700">0 item</span>
+                            </div>
+                            <div class="overflow-x-auto max-h-64">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase">
+                                            <th class="py-2 px-3">Tanggal</th>
+                                            <th class="py-2 px-3">Kategori</th>
+                                            <th class="py-2 px-3">Keterangan</th>
+                                            <th class="py-2 px-3 text-right">Nominal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rep-cashin-body" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Tabel Laporan Pengeluaran Uang Kas -->
+                        <div class="border border-slate-200 rounded-2xl overflow-hidden">
+                            <div class="px-4 py-2.5 bg-rose-50/80 border-b border-slate-200 flex items-center justify-between">
+                                <span class="text-xs font-bold text-rose-800">Rincian Pengeluaran Uang Kas</span>
+                                <span id="rep-expense-count" class="text-[11px] font-semibold text-rose-700">0 item</span>
+                            </div>
+                            <div class="overflow-x-auto max-h-64">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase">
+                                            <th class="py-2 px-3">Tanggal</th>
+                                            <th class="py-2 px-3">Kategori</th>
+                                            <th class="py-2 px-3">Keterangan</th>
+                                            <th class="py-2 px-3 text-right">Nominal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rep-expense-body" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== TAB 4: PROFIL TOKO ==================== -->
+            <section id="view-profile" class="hidden space-y-6">
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="h-24 sm:h-32 bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900"></div>
+                    <div class="px-5 sm:px-8 pb-6">
+                        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 sm:-mt-14">
+                            <div class="flex flex-col sm:flex-row sm:items-end gap-4">
+                                <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-white p-1.5 shadow-lg border border-slate-200 shrink-0">
+                                    <div class="w-full h-full rounded-2xl bg-slate-100 overflow-hidden flex items-center justify-center relative">
+                                        <img id="prof-avatar-preview" src="" alt="Foto Profil Toko" class="hidden w-full h-full object-cover">
+                                        <svg id="prof-avatar-placeholder" class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                        </svg>
+                                    </div>
+                                    <button type="button" id="btn-camera-upload" title="Upload Foto Toko" class="absolute -bottom-2 -right-2 w-9 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md flex items-center justify-center transition cursor-pointer">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                            <circle cx="12" cy="13" r="4"></circle>
+                                        </svg>
+                                    </button>
+                                    <input type="file" id="prof-photo-file" accept="image/*" class="hidden">
+                                </div>
+
+                                <div class="pt-1">
+                                    <h2 id="prof-hero-name" class="text-xl sm:text-2xl font-bold text-slate-900">Nama Toko Anda</h2>
+                                    <p id="prof-hero-tagline" class="text-xs sm:text-sm text-slate-500">Slogan Toko</p>
+                                    <div class="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-600">
+                                        <span id="prof-hero-admin" class="inline-flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-lg font-medium">Admin: -</span>
+                                        <span id="prof-hero-phone" class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg font-medium">WA: -</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" id="btn-upload-photo-main" class="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition cursor-pointer">
+                                    Upload Foto / Banner
+                                </button>
+                                <button type="button" id="btn-remove-photo" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition cursor-pointer">
+                                    Hapus Foto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="form-store-profile" class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-900">Informasi Identitas Toko</h3>
+                        <p class="text-xs text-slate-500">Data ini otomatis digunakan pada kop nota cetak dan pesan WhatsApp.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Toko / Konter *</label>
+                            <input type="text" id="prof-name" required class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Slogan Konter</label>
+                            <input type="text" id="prof-tagline" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">No. WhatsApp Toko *</label>
+                            <input type="tel" id="prof-phone" required class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Pemilik / Admin</label>
+                            <input type="text" id="prof-admin" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Alamat Lengkap Toko</label>
+                        <input type="text" id="prof-address" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Syarat & Ketentuan Garansi (Footer Nota)</label>
+                        <textarea id="prof-terms" rows="3" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-100 space-y-4">
+                        <h4 class="text-sm font-bold text-slate-900">Keamanan PIN & Sinkronisasi Google Sheets</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">PIN Keamanan (4-6 Angka) *</label>
+                                <input type="text" id="prof-pin" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" required class="w-full px-3.5 py-2.5 text-sm font-mono border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Link Web App Google Apps Script</label>
+                                <input type="url" id="prof-webapp-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                        <button type="button" id="btn-pull-server" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition cursor-pointer">
+                            Tarik Data dari Server
+                        </button>
+                        <button type="submit" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-blue-600/25 transition cursor-pointer">
+                            Simpan Profil Toko
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <!-- ==================== BOTTOM NAVIGATION BAR ==================== -->
+    <nav id="bottom-nav-bar" class="hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200 shadow-[0_-4px_20px_rgba(15,23,42,0.06)]">
+        <div class="max-w-xl mx-auto grid grid-cols-4 h-16 px-2">
+            <button type="button" data-tab="dashboard" class="nav-btn flex flex-col items-center justify-center gap-1 text-blue-600 font-semibold transition cursor-pointer">
+                <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                    <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                    <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                    <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                </svg>
+                <span class="text-[11px] pointer-events-none">Dashboard</span>
+            </button>
+            <button type="button" data-tab="services" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-slate-900 font-medium transition cursor-pointer">
+                <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                </svg>
+                <span class="text-[11px] pointer-events-none">Service</span>
+            </button>
+            <button type="button" data-tab="reports" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-slate-900 font-medium transition cursor-pointer">
+                <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                <span class="text-[11px] pointer-events-none">Laporan</span>
+            </button>
+            <button type="button" data-tab="profile" class="nav-btn flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-slate-900 font-medium transition cursor-pointer">
+                <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span class="text-[11px] pointer-events-none">Profil Toko</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ==================== MODAL TAMBAH / EDIT SERVICE ==================== -->
+    <div id="service-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <h3 id="service-modal-title" class="font-bold text-base sm:text-lg text-slate-900">Tambah Data Service Baru</h3>
+                <button type="button" id="btn-close-service-modal" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer">✕</button>
+            </div>
+
+            <form id="service-form" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <input type="hidden" id="srv-id">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor Nota *</label>
+                        <input type="text" id="srv-nota" required class="w-full px-3.5 py-2 text-sm font-mono bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Masuk *</label>
+                        <input type="date" id="srv-date" required class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Pelanggan *</label>
+                        <input type="text" id="srv-customer" required placeholder="Nama lengkap pelanggan" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">No. WhatsApp Pelanggan *</label>
+                        <input type="tel" id="srv-phone" required placeholder="08123456789" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tipe / Merk Handphone *</label>
+                        <input type="text" id="srv-device" required placeholder="Contoh: Samsung A54 / iPhone 11" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">IMEI / Serial Number</label>
+                        <input type="text" id="srv-imei" placeholder="Opsional" class="w-full px-3.5 py-2 text-sm font-mono border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Kelengkapan Unit</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                        <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                            <input type="checkbox" value="Unit HP" class="acc-checkbox rounded text-blue-600" checked> Unit HP
+                        </label>
+                        <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                            <input type="checkbox" value="Baterai" class="acc-checkbox rounded text-blue-600" checked> Baterai
+                        </label>
+                        <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                            <input type="checkbox" value="SIM Card" class="acc-checkbox rounded text-blue-600"> SIM Card
+                        </label>
+                        <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                            <input type="checkbox" value="Memory Card" class="acc-checkbox rounded text-blue-600"> Memory Card
+                        </label>
+                        <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                            <input type="checkbox" value="Dus / Box" class="acc-checkbox rounded text-blue-600"> Dus / Box
+                        </label>
+                        <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                            <input type="checkbox" value="Charger" class="acc-checkbox rounded text-blue-600"> Charger
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Keluhan / Kerusakan & Tindakan *</label>
+                    <textarea id="srv-issue" rows="2" required placeholder="Contoh: Ganti LCD Original + Pasang Tempered Glass" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Teknisi Penanggung Jawab *</label>
+                        <input type="text" id="srv-tech" required placeholder="Ketik nama teknisi..." class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Status Pengerjaan *</label>
+                        <select id="srv-status" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="Antrian">Antrian</option>
+                            <option value="Proses">Proses</option>
+                            <option value="Menunggu Part">Menunggu Part</option>
+                            <option value="Selesai">Selesai</option>
+                            <option value="Diambil">Diambil</option>
+                            <option value="Batal">Batal</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Modal Sparepart (Rp)</label>
+                        <input type="number" id="srv-parts" min="0" value="0" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Total Biaya Service (Rp)</label>
+                        <input type="number" id="srv-total" min="0" value="0" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-emerald-700 mb-1">Estimasi Laba Bersih</label>
+                        <div id="srv-profit-preview" class="px-3 py-2 text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl">
+                            Rp 0
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2.5 pt-2">
+                    <button type="button" id="btn-cancel-service-modal" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition cursor-pointer">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-md transition cursor-pointer">
+                        Simpan Data Service
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL CETAK NOTA SERVICE ==================== -->
+    <div id="nota-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+            <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between no-print">
+                <h3 class="font-bold text-sm text-slate-900">Tanda Terima & Nota Service</h3>
+                <button type="button" id="btn-close-nota-modal" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 transition cursor-pointer">✕</button>
+            </div>
+
+            <div id="nota-print-area" class="p-6 text-slate-900 text-xs space-y-4">
+                <div class="text-center border-b border-dashed border-slate-300 pb-3">
+                    <h2 id="nota-doc-store" class="font-extrabold text-base uppercase tracking-wide">NAMA TOKO</h2>
+                    <p id="nota-doc-tagline" class="text-[11px] text-slate-600"></p>
+                    <p id="nota-doc-address" class="text-[11px] text-slate-500 mt-0.5"></p>
+                    <p id="nota-doc-phone" class="text-[11px] font-semibold text-slate-700"></p>
+                </div>
+
+                <div class="flex justify-between items-center bg-slate-100 px-3 py-2 rounded-xl font-mono text-xs">
+                    <span id="nota-doc-number" class="font-bold">SRV-000</span>
+                    <span id="nota-doc-date">2026-01-01</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 border-b border-dashed border-slate-300 pb-3">
+                    <div>
+                        <span class="text-slate-400 block text-[10px] uppercase">Pelanggan</span>
+                        <span id="nota-doc-customer" class="font-bold text-slate-800">-</span>
+                        <span id="nota-doc-custphone" class="block text-slate-500">-</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-slate-400 block text-[10px] uppercase">Perangkat</span>
+                        <span id="nota-doc-device" class="font-bold text-slate-800">-</span>
+                        <span id="nota-doc-imei" class="block font-mono text-[10px] text-slate-500">-</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5 border-b border-dashed border-slate-300 pb-3">
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Teknisi:</span>
+                        <span id="nota-doc-tech" class="font-semibold">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500">Status Unit:</span>
+                        <span id="nota-doc-status" class="font-bold text-blue-600">-</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block">Kelengkapan:</span>
+                        <span id="nota-doc-acc" class="font-medium text-slate-800">-</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block">Keluhan / Tindakan:</span>
+                        <span id="nota-doc-issue" class="font-medium text-slate-800">-</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-blue-50 px-3.5 py-2.5 rounded-xl border border-blue-100">
+                    <span class="font-bold text-slate-700">TOTAL BIAYA SERVICE</span>
+                    <span id="nota-doc-total" class="font-extrabold text-base text-blue-700">Rp 0</span>
+                </div>
+
+                <div class="text-[10px] text-slate-500 whitespace-pre-line leading-relaxed border-t border-slate-200 pt-2.5">
+                    <p class="font-semibold text-slate-700 mb-0.5">Syarat & Ketentuan Garansi:</p>
+                    <p id="nota-doc-terms"></p>
+                </div>
+            </div>
+
+            <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex gap-2 no-print">
+                <button type="button" id="btn-wa-from-nota" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition cursor-pointer">
+                    Kirim WA
+                </button>
+                <button type="button" id="btn-print-nota" class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition cursor-pointer">
+                    Cetak Nota
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL PEMASUKAN UANG KAS ==================== -->
+    <div id="cashin-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="font-bold text-base text-slate-900">Catat Pemasukan Uang Kas</h3>
+                <button type="button" id="btn-close-cashin-modal" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer">✕</button>
+            </div>
+            <form id="cashin-form" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal *</label>
+                        <input type="date" id="cin-date" required class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Sumber / Kategori *</label>
+                        <select id="cin-category" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="Setoran Modal Kas">Setoran Modal Kas</option>
+                            <option value="Penjualan Aksesoris">Penjualan Aksesoris</option>
+                            <option value="Penjualan Pulsa / Voucher">Penjualan Pulsa / Voucher</option>
+                            <option value="Pengembalian Kasbon">Pengembalian Kasbon</option>
+                            <option value="Lain-lain">Lain-lain</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Keterangan Pemasukan *</label>
+                    <input type="text" id="cin-note" required placeholder="Contoh: Tambah kas laci / Jual charger & kabel data" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nominal Pemasukan (Rp) *</label>
+                    <input type="number" id="cin-amount" min="1" required placeholder="Contoh: 250000" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-2.5 pt-2">
+                    <button type="button" id="btn-cancel-cashin-modal" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition cursor-pointer">Batal</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold shadow-md transition cursor-pointer">Simpan Pemasukan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL PENGELUARAN UANG KAS ==================== -->
+    <div id="expense-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="font-bold text-base text-slate-900">Catat Pengeluaran Uang Kas</h3>
+                <button type="button" id="btn-close-expense-modal" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer">✕</button>
+            </div>
+            <form id="expense-form" class="p-6 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal *</label>
+                        <input type="date" id="exp-date" required class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori *</label>
+                        <select id="exp-category" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                            <option value="Belanja Sparepart">Belanja Sparepart</option>
+                            <option value="Operasional Konter">Operasional Konter</option>
+                            <option value="Listrik & Internet">Listrik & Internet</option>
+                            <option value="Gaji / Kasbon Teknisi">Gaji / Kasbon Teknisi</option>
+                            <option value="Lain-lain">Lain-lain</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Keterangan Pengeluaran *</label>
+                    <input type="text" id="exp-note" required placeholder="Contoh: Beli LCD Redmi Note 10 / Token Listrik" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nominal Pengeluaran (Rp) *</label>
+                    <input type="number" id="exp-amount" min="1" required placeholder="Contoh: 150000" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-2.5 pt-2">
+                    <button type="button" id="btn-cancel-expense-modal" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition cursor-pointer">Batal</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold shadow-md transition cursor-pointer">Simpan Pengeluaran</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL ATUR UANG KAS AWAL ==================== -->
+    <div id="initial-cash-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="font-bold text-base text-slate-900">Atur Nominal Uang Kas Awal</h3>
+                <button type="button" id="btn-close-initial-cash-modal" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer">✕</button>
+            </div>
+            <form id="initial-cash-form" class="p-6 space-y-4">
+                <div class="p-3 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-800 leading-relaxed">
+                    Masukkan nominal modal uang kas awal. Saldo kas ini terpisah dari pemasukan transaksi service dan bertambah/berkurang mengikuti pemasukan serta pengeluaran kas.
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nominal Uang Kas Awal (Rp) *</label>
+                    <input type="number" id="input-initial-cash" min="0" required placeholder="Contoh: 500000" class="w-full px-3.5 py-2.5 text-sm font-semibold border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-2.5 pt-2">
+                    <button type="button" id="btn-cancel-initial-cash-modal" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition cursor-pointer">Batal</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-md transition cursor-pointer">Simpan Kas Awal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL KONFIRMASI ==================== -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-slate-200 overflow-hidden p-6 space-y-4">
+            <h3 id="confirm-title" class="font-bold text-base text-slate-900">Konfirmasi</h3>
+            <p id="confirm-message" class="text-xs sm:text-sm text-slate-600 leading-relaxed">Apakah Anda yakin?</p>
+            <div class="flex justify-end gap-2.5 pt-2">
+                <button type="button" id="btn-confirm-cancel" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition cursor-pointer">Batal</button>
+                <button type="button" id="btn-confirm-ok" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold shadow-md transition cursor-pointer">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TOAST NOTIFICATION ==================== -->
+    <div id="toast" class="fixed bottom-20 right-4 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl text-xs sm:text-sm font-medium flex items-center gap-2 border border-slate-700">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="toast-msg">Berhasil disimpan</span>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_PROFILE_KEY = 'service_hp_profile_v3';
+        const STORAGE_SERVICES_KEY = 'service_hp_records_v3';
+        const STORAGE_CASHIN_KEY = 'service_hp_cashin_v3';
+        const STORAGE_EXPENSES_KEY = 'service_hp_expenses_v3';
+        const STORAGE_WEBAPP_URL_KEY = 'service_hp_webapp_url_v3';
+        const STORAGE_THEME_KEY = 'service_hp_theme_v3';
+        const SESSION_UNLOCKED_KEY = 'service_hp_unlocked_v3';
+
+        let storeProfile = null;
+        let servicesData = [];
+        let cashInData = [];
+        let expensesData = [];
+        let webAppUrl = '';
+        let enteredPin = '';
+        let pinResetTimer = null;
+        let statusChartInstance = null;
+        let financeChartInstance = null;
+        let currentNotaService = null;
+        let confirmCallback = null;
+        let memoryUnlocked = false;
+
+        // ==================== MODE GELAP & TERANG ====================
+        function getPreferredTheme() {
+            const saved = safeLocalGet(STORAGE_THEME_KEY);
+            if (saved === 'dark' || saved === 'light') return saved;
+            return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        }
+
+        function applyTheme(theme) {
+            const isDark = theme === 'dark';
+            document.documentElement.classList.toggle('dark', isDark);
+            safeLocalSet(STORAGE_THEME_KEY, isDark ? 'dark' : 'light');
+
+            document.querySelectorAll('.theme-icon-sun').forEach(el => {
+                el.classList.toggle('hidden', !isDark);
+            });
+            document.querySelectorAll('.theme-icon-moon').forEach(el => {
+                el.classList.toggle('hidden', isDark);
+            });
+
+            if (document.getElementById('app-workspace') && !document.getElementById('app-workspace').classList.contains('hidden')) {
+                if (!document.getElementById('view-dashboard').classList.contains('hidden')) renderDashboard();
+                if (!document.getElementById('view-reports').classList.contains('hidden')) renderReports();
+            }
+        }
+
+        function toggleTheme() {
+            const isCurrentlyDark = document.documentElement.classList.contains('dark');
+            applyTheme(isCurrentlyDark ? 'light' : 'dark');
+        }
+
+        function safeLocalGet(key) {
+            try { return localStorage.getItem(key); } catch (e) { return null; }
+        }
+        function safeLocalSet(key, val) {
+            try { localStorage.setItem(key, val); } catch (e) {}
+        }
+        function safeSessionGet(key) {
+            try { return sessionStorage.getItem(key); } catch (e) { return memoryUnlocked ? '1' : null; }
+        }
+        function safeSessionSet(key, val) {
+            memoryUnlocked = val === '1';
+            try { sessionStorage.setItem(key, val); } catch (e) {}
+        }
+        function safeSessionRemove(key) {
+            memoryUnlocked = false;
+            try { sessionStorage.removeItem(key); } catch (e) {}
+        }
+
+        // ==================== UTILITAS FORMAT ====================
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatRupiah(num) {
+            const val = Number(num) || 0;
+            return 'Rp ' + val.toLocaleString('id-ID');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function openConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            confirmCallback = onConfirm;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            confirmCallback = null;
+        }
+
+        function isGasEnvironment() {
+            return typeof google !== 'undefined' && google.script && google.script.run;
+        }
+
+        function setDbStatus(state, label) {
+            const badge = document.getElementById('db-status-badge');
+            const dot = document.getElementById('db-status-dot');
+            const text = document.getElementById('db-status-text');
+            if (!badge) return;
+
+            badge.classList.remove(
+                'bg-emerald-50', 'text-emerald-700', 'border-emerald-200',
+                'bg-amber-50', 'text-amber-700', 'border-amber-200',
+                'bg-blue-50', 'text-blue-700', 'border-blue-200'
+            );
+            dot.classList.remove('bg-emerald-500', 'bg-amber-500', 'bg-blue-500', 'animate-pulse');
+
+            if (state === 'syncing') {
+                badge.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
+                dot.classList.add('bg-blue-500', 'animate-pulse');
+            } else if (state === 'online') {
+                badge.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+                dot.classList.add('bg-emerald-500');
+            } else {
+                badge.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-200');
+                dot.classList.add('bg-amber-500');
+            }
+            text.textContent = label;
+        }
+
+        // ==================== PENYIMPANAN & SINKRONISASI ONLINE ====================
+        function saveLocalCache() {
+            safeLocalSet(STORAGE_SERVICES_KEY, JSON.stringify(servicesData));
+            safeLocalSet(STORAGE_CASHIN_KEY, JSON.stringify(cashInData));
+            safeLocalSet(STORAGE_EXPENSES_KEY, JSON.stringify(expensesData));
+            safeLocalSet(STORAGE_WEBAPP_URL_KEY, webAppUrl || '');
+            if (storeProfile) {
+                try {
+                    localStorage.setItem(STORAGE_PROFILE_KEY, JSON.stringify(storeProfile));
+                } catch (e) {
+                    const slimProfile = { ...storeProfile, photoUrl: '' };
+                    safeLocalSet(STORAGE_PROFILE_KEY, JSON.stringify(slimProfile));
+                }
+            }
+        }
+
+        function loadLocalCache() {
+            try {
+                const rawProf = safeLocalGet(STORAGE_PROFILE_KEY);
+                storeProfile = rawProf ? JSON.parse(rawProf) : null;
+            } catch (e) {
+                storeProfile = null;
+            }
+
+            try {
+                const rawSrv = safeLocalGet(STORAGE_SERVICES_KEY);
+                servicesData = rawSrv ? JSON.parse(rawSrv) : [];
+                if (!Array.isArray(servicesData)) servicesData = [];
+            } catch (e) {
+                servicesData = [];
+            }
+
+            try {
+                const rawCin = safeLocalGet(STORAGE_CASHIN_KEY);
+                cashInData = rawCin ? JSON.parse(rawCin) : [];
+                if (!Array.isArray(cashInData)) cashInData = [];
+            } catch (e) {
+                cashInData = [];
+            }
+
+            try {
+                const rawExp = safeLocalGet(STORAGE_EXPENSES_KEY);
+                expensesData = rawExp ? JSON.parse(rawExp) : [];
+                if (!Array.isArray(expensesData)) expensesData = [];
+            } catch (e) {
+                expensesData = [];
+            }
+
+            webAppUrl = safeLocalGet(STORAGE_WEBAPP_URL_KEY) || '';
+        }
+
+        function syncToOnlineDatabase(onDone) {
+            saveLocalCache();
+            const payload = {
+                profile: storeProfile,
+                services: servicesData,
+                cashIn: cashInData,
+                expenses: expensesData
+            };
+
+            if (isGasEnvironment()) {
+                setDbStatus('syncing', 'Menyimpan...');
+                google.script.run
+                    .withSuccessHandler(() => {
+                        setDbStatus('online', 'Google Sheets');
+                        if (typeof onDone === 'function') onDone(true);
+                    })
+                    .withFailureHandler(() => {
+                        setDbStatus('local', 'Lokal (Gagal Sync)');
+                        if (typeof onDone === 'function') onDone(false);
+                    })
+                    .saveAllDataPayload(payload);
+                return;
+            }
+
+            if (webAppUrl && webAppUrl.startsWith('http')) {
+                setDbStatus('syncing', 'Menyimpan...');
+                fetch(webAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                })
+                .then(() => {
+                    setDbStatus('online', 'Sheets Terhubung');
+                    if (typeof onDone === 'function') onDone(true);
+                })
+                .catch(() => {
+                    setDbStatus('local', 'Mode Lokal');
+                    if (typeof onDone === 'function') onDone(false);
+                });
+                return;
+            }
+
+            setDbStatus('local', 'Mode Lokal');
+            if (typeof onDone === 'function') onDone(true);
+        }
+
+        function pullFromOnlineDatabase(targetUrl, onDone) {
+            const urlToUse = (targetUrl || webAppUrl || '').trim();
+
+            if (isGasEnvironment()) {
+                setDbStatus('syncing', 'Memuat...');
+                google.script.run
+                    .withSuccessHandler((res) => {
+                        if (res && res.status === 'success') {
+                            if (Array.isArray(res.services)) servicesData = res.services;
+                            if (Array.isArray(res.cashIn)) cashInData = res.cashIn;
+                            if (Array.isArray(res.expenses)) expensesData = res.expenses;
+                            if (res.profile && res.profile.name) {
+                                const serverPhoto = String(res.profile.photoUrl || '').trim();
+                                const localPhoto = String((storeProfile && storeProfile.photoUrl) || '').trim();
+                                storeProfile = {
+                                    ...(storeProfile || {}),
+                                    ...res.profile,
+                                    photoUrl: serverPhoto || localPhoto
+                                };
+                            }
+                            saveLocalCache();
+                            setDbStatus('online', 'Google Sheets');
+                            if (typeof onDone === 'function') onDone(true);
+                        } else {
+                            setDbStatus('local', 'Mode Lokal');
+                            if (typeof onDone === 'function') onDone(false);
+                        }
+                    })
+                    .withFailureHandler(() => {
+                        setDbStatus('local', 'Mode Lokal');
+                        if (typeof onDone === 'function') onDone(false);
+                    })
+                    .getAllDataPayload();
+                return;
+            }
+
+            if (!urlToUse || !urlToUse.startsWith('http')) {
+                setDbStatus('local', 'Mode Lokal');
+                if (typeof onDone === 'function') onDone(false);
+                return;
+            }
+
+            setDbStatus('syncing', 'Menghubungkan...');
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 12000);
+            const fetchUrl = urlToUse + (urlToUse.includes('?') ? '&' : '?') + 'action=getAll&t=' + Date.now();
+
+            fetch(fetchUrl, { signal: controller.signal })
+                .then(r => r.json())
+                .then(res => {
+                    clearTimeout(timer);
+                    if (res && res.status === 'success') {
+                        webAppUrl = urlToUse;
+                        if (Array.isArray(res.services)) servicesData = res.services;
+                        if (Array.isArray(res.cashIn)) cashInData = res.cashIn;
+                        if (Array.isArray(res.expenses)) expensesData = res.expenses;
+                        if (res.profile && res.profile.name) {
+                            const serverPhoto = String(res.profile.photoUrl || '').trim();
+                            const localPhoto = String((storeProfile && storeProfile.photoUrl) || '').trim();
+                            storeProfile = {
+                                ...(storeProfile || {}),
+                                ...res.profile,
+                                photoUrl: serverPhoto || localPhoto
+                            };
+                        }
+                        saveLocalCache();
+                        setDbStatus('online', 'Sheets Terhubung');
+                        if (typeof onDone === 'function') onDone(true);
+                    } else {
+                        setDbStatus('local', 'Mode Lokal');
+                        if (typeof onDone === 'function') onDone(false);
+                    }
+                })
+                .catch(() => {
+                    clearTimeout(timer);
+                    setDbStatus('local', 'Mode Lokal');
+                    if (typeof onDone === 'function') onDone(false);
+                });
+        }
+
+        // ==================== IDENTITAS TOKO & FOTO ====================
+        function setAvatarImageState(imgEl, iconEl, photoUrl) {
+            if (!imgEl || !iconEl) return;
+            const cleanUrl = String(photoUrl || '').trim();
+            if (!cleanUrl) {
+                imgEl.removeAttribute('src');
+                imgEl.classList.add('hidden');
+                iconEl.classList.remove('hidden');
+                return;
+            }
+
+            imgEl.onerror = function() {
+                imgEl.classList.add('hidden');
+                iconEl.classList.remove('hidden');
+            };
+            imgEl.onload = function() {
+                imgEl.classList.remove('hidden');
+                iconEl.classList.add('hidden');
+            };
+            imgEl.src = cleanUrl;
+            if (imgEl.complete && imgEl.naturalWidth > 0) {
+                imgEl.classList.remove('hidden');
+                iconEl.classList.add('hidden');
+            }
+        }
+
+        function applyStoreIdentityToUI() {
+            const p = storeProfile || {
+                name: 'Toko Service HP',
+                tagline: 'Manajemen & Laporan Service HP',
+                phone: '-',
+                adminName: 'Admin',
+                address: '-',
+                terms: '1. Garansi service 14 hari.\n2. Barang tidak diambil > 30 hari di luar tanggung jawab kami.',
+                photoUrl: ''
+            };
+
+            document.title = p.name + ' - Manajemen Service HP';
+            document.getElementById('header-store-name').textContent = p.name;
+            document.getElementById('header-store-tagline').textContent = p.tagline || 'Manajemen Service HP';
+            document.getElementById('pin-store-title').textContent = p.name;
+
+            const photo = (p.photoUrl || '').trim();
+            setAvatarImageState(
+                document.getElementById('header-store-avatar'),
+                document.getElementById('header-store-icon'),
+                photo
+            );
+            setAvatarImageState(
+                document.getElementById('pin-screen-avatar'),
+                document.getElementById('pin-screen-icon'),
+                photo
+            );
+
+            const bannerImg = document.getElementById('dashboard-banner-img');
+            const bannerBg = document.getElementById('dashboard-banner-bg');
+            const bannerVignette = document.getElementById('dashboard-banner-vignette');
+            const bannerEmpty = document.getElementById('dashboard-banner-empty');
+
+            if (photo) {
+                bannerImg.src = photo;
+                bannerImg.classList.remove('hidden');
+                if (bannerBg) bannerBg.classList.add('hidden');
+                if (bannerVignette) bannerVignette.classList.add('hidden');
+                bannerEmpty.classList.add('hidden');
+
+                bannerImg.onerror = function() {
+                    bannerImg.classList.add('hidden');
+                    bannerEmpty.classList.remove('hidden');
+                };
+            } else {
+                bannerImg.classList.add('hidden');
+                if (bannerBg) bannerBg.classList.add('hidden');
+                if (bannerVignette) bannerVignette.classList.add('hidden');
+                bannerEmpty.classList.remove('hidden');
+            }
+        }
+
+        function compressAndUploadPhoto(file) {
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showToast('Pilih file gambar (JPG, PNG, WEBP, GIF).');
+                return;
+            }
+
+            showToast('Memproses gambar...');
+            const reader = new FileReader();
+            reader.onerror = function() {
+                showToast('Gagal membaca file gambar.');
+            };
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onerror = function() {
+                    showToast('Format gambar tidak didukung browser.');
+                };
+                img.onload = function() {
+                    const dimSteps = [1600, 1360, 1120, 900];
+                    const qualitySteps = [0.88, 0.78, 0.68, 0.58];
+                    let bestDataUrl = '';
+
+                    for (let d = 0; d < dimSteps.length; d++) {
+                        const maxDim = dimSteps[d];
+                        let w = img.naturalWidth || img.width;
+                        let h = img.naturalHeight || img.height;
+
+                        if (w > maxDim || h > maxDim) {
+                            if (w >= h) {
+                                h = Math.round((h * maxDim) / w);
+                                w = maxDim;
+                            } else {
+                                w = Math.round((w * maxDim) / h);
+                                h = maxDim;
+                            }
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.max(1, w);
+                        canvas.height = Math.max(1, h);
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.fillStyle = '#0f172a';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        for (let q = 0; q < qualitySteps.length; q++) {
+                            bestDataUrl = canvas.toDataURL('image/jpeg', qualitySteps[q]);
+                            if (bestDataUrl.length <= 250000) break;
+                        }
+                        if (bestDataUrl.length <= 250000) break;
+                    }
+
+                    storeProfile = {
+                        ...(storeProfile || {}),
+                        photoUrl: bestDataUrl
+                    };
+                    applyStoreIdentityToUI();
+                    updateProfileLivePreview();
+                    syncToOnlineDatabase(() => {
+                        showToast('Foto profil toko berhasil disimpan!');
+                    });
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ==================== LAYAR KUNCI PIN ====================
+        function normalizePinValue(rawPin) {
+            return String(rawPin || '').replace(/[^0-9]/g, '').trim();
+        }
+
+        function getExpectedPin() {
+            const normalized = normalizePinValue(storeProfile && storeProfile.pin);
+            return normalized || '1234';
+        }
+
+        function updatePinDots() {
+            const expectedPin = getExpectedPin();
+            const hintEl = document.getElementById('pin-length-hint');
+            if (hintEl) {
+                hintEl.textContent = `PIN ${expectedPin.length} digit`;
+            }
+
+            const dots = document.querySelectorAll('#pin-dots span');
+            dots.forEach((dot, idx) => {
+                const isActiveSlot = idx < expectedPin.length;
+                dot.classList.toggle('hidden', !isActiveSlot);
+                if (!isActiveSlot) return;
+
+                if (idx < enteredPin.length) {
+                    dot.classList.remove('border-slate-300');
+                    dot.classList.add('bg-blue-600', 'border-blue-600', 'scale-110');
+                } else {
+                    dot.classList.add('border-slate-300');
+                    dot.classList.remove('bg-blue-600', 'border-blue-600', 'scale-110');
+                }
+            });
+        }
+
+        function handlePinDigit(digit) {
+            const cleanDigit = String(digit || '').replace(/[^0-9]/g, '');
+            if (!cleanDigit) return;
+
+            const expectedPin = getExpectedPin();
+            if (pinResetTimer) {
+                clearTimeout(pinResetTimer);
+                pinResetTimer = null;
+            }
+            document.getElementById('pin-error').classList.add('hidden');
+            document.getElementById('pin-card').classList.remove('animate-pin-shake');
+
+            if (enteredPin.length >= expectedPin.length) {
+                enteredPin = '';
+            }
+            enteredPin += cleanDigit;
+            updatePinDots();
+
+            if (navigator.vibrate) {
+                try { navigator.vibrate(15); } catch (e) {}
+            }
+
+            const normalizedEntered = normalizePinValue(enteredPin);
+            if (normalizedEntered === expectedPin) {
+                safeSessionSet(SESSION_UNLOCKED_KEY, '1');
+                enteredPin = '';
+                updatePinDots();
+                enterAppWorkspace();
+                return;
+            }
+
+            if (normalizedEntered.length >= expectedPin.length) {
+                const errEl = document.getElementById('pin-error');
+                const cardEl = document.getElementById('pin-card');
+                errEl.textContent = `PIN salah (${expectedPin.length} digit), silakan coba lagi.`;
+                errEl.classList.remove('hidden');
+                cardEl.classList.remove('animate-pin-shake');
+                void cardEl.offsetWidth;
+                cardEl.classList.add('animate-pin-shake');
+
+                if (navigator.vibrate) {
+                    try { navigator.vibrate([40, 40, 40]); } catch (e) {}
+                }
+
+                pinResetTimer = setTimeout(() => {
+                    enteredPin = '';
+                    updatePinDots();
+                }, 420);
+            }
+        }
+
+        function clearPinInput() {
+            if (pinResetTimer) {
+                clearTimeout(pinResetTimer);
+                pinResetTimer = null;
+            }
+            enteredPin = '';
+            document.getElementById('pin-error').classList.add('hidden');
+            updatePinDots();
+        }
+
+        function backspacePinInput() {
+            if (pinResetTimer) {
+                clearTimeout(pinResetTimer);
+                pinResetTimer = null;
+            }
+            enteredPin = enteredPin.slice(0, -1);
+            document.getElementById('pin-error').classList.add('hidden');
+            updatePinDots();
+        }
+
+        // ==================== NAVIGASI TAB ====================
+        function switchTab(tabName) {
+            const bannerCard = document.getElementById('dashboard-banner-card');
+            if (bannerCard) {
+                if (tabName === 'dashboard') bannerCard.classList.remove('hidden');
+                else bannerCard.classList.add('hidden');
+            }
+
+            const views = ['dashboard', 'services', 'reports', 'profile'];
+            views.forEach(v => {
+                const section = document.getElementById('view-' + v);
+                if (section) {
+                    if (v === tabName) section.classList.remove('hidden');
+                    else section.classList.add('hidden');
+                }
+            });
+
+            document.querySelectorAll('#bottom-nav-bar .nav-btn').forEach(btn => {
+                const isActive = btn.getAttribute('data-tab') === tabName;
+                btn.classList.toggle('text-blue-600', isActive);
+                btn.classList.toggle('font-semibold', isActive);
+                btn.classList.toggle('text-slate-500', !isActive);
+                btn.classList.toggle('font-medium', !isActive);
+            });
+
+            if (tabName === 'dashboard') renderDashboard();
+            if (tabName === 'services') renderServicesTable();
+            if (tabName === 'reports') renderReports();
+            if (tabName === 'profile') populateProfileForm();
+        }
+
+        // ==================== DASHBOARD & GRAFIK STATUS ====================
+        function getStatusBadgeHtml(status) {
+            const map = {
+                'Antrian': 'bg-slate-100 text-slate-700 border-slate-200',
+                'Proses': 'bg-blue-50 text-blue-700 border-blue-200',
+                'Menunggu Part': 'bg-amber-50 text-amber-700 border-amber-200',
+                'Selesai': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                'Diambil': 'bg-purple-50 text-purple-700 border-purple-200',
+                'Batal': 'bg-rose-50 text-rose-700 border-rose-200'
+            };
+            const cls = map[status] || map['Antrian'];
+            return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${cls}">${escapeHtml(status)}</span>`;
+        }
+
+        function renderDashboard() {
+            const totalUnits = servicesData.length;
+            const inProcess = servicesData.filter(s => ['Antrian', 'Proses', 'Menunggu Part'].includes(s.status)).length;
+            const readyUnits = servicesData.filter(s => ['Selesai', 'Diambil'].includes(s.status)).length;
+
+            const validTrans = servicesData.filter(s => s.status !== 'Batal');
+            const totalRevenue = validTrans.reduce((acc, s) => acc + (Number(s.totalPrice) || 0), 0);
+            const totalParts = validTrans.reduce((acc, s) => acc + (Number(s.partsCost) || 0), 0);
+            const totalProfit = totalRevenue - totalParts;
+
+            document.getElementById('kpi-total').textContent = totalUnits;
+            document.getElementById('kpi-process').textContent = inProcess;
+            document.getElementById('kpi-ready').textContent = readyUnits;
+            document.getElementById('kpi-revenue').textContent = formatRupiah(totalRevenue);
+            document.getElementById('kpi-profit').textContent = formatRupiah(totalProfit);
+
+            const recentBody = document.getElementById('recent-services-body');
+            const recentList = [...servicesData].slice(0, 5);
+            if (recentList.length === 0) {
+                recentBody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-400 text-xs">Belum ada data service. Klik "+ Input Baru" untuk memulai.</td></tr>`;
+            } else {
+                recentBody.innerHTML = recentList.map(item => `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3 px-2">
+                            <div class="font-mono text-[11px] font-bold text-blue-600">${escapeHtml(item.nota)}</div>
+                            <div class="font-semibold text-slate-800">${escapeHtml(item.customer)}</div>
+                        </td>
+                        <td class="py-3 px-2">
+                            <div class="font-medium text-slate-800">${escapeHtml(item.device)}</div>
+                            <div class="text-[11px] text-slate-500 truncate max-w-[160px]">${escapeHtml(item.issue)}</div>
+                        </td>
+                        <td class="py-3 px-2 font-semibold text-slate-800">${formatRupiah(item.totalPrice)}</td>
+                        <td class="py-3 px-2 text-right">${getStatusBadgeHtml(item.status)}</td>
+                    </tr>
+                `).join('');
+            }
+
+            const statuses = ['Antrian', 'Proses', 'Menunggu Part', 'Selesai', 'Diambil', 'Batal'];
+            const counts = statuses.map(st => servicesData.filter(s => s.status === st).length);
+            renderStatusChart(statuses, counts);
+        }
+
+        function renderStatusChart(labels, counts) {
+            const canvas = document.getElementById('statusChart');
+            const legendBox = document.getElementById('status-legend-list');
+            const colors = ['#64748b', '#2563eb', '#f59e0b', '#10b981', '#8b5cf6', '#f43f5e'];
+
+            legendBox.innerHTML = labels.map((lbl, i) => `
+                <div class="flex items-center justify-between px-2 py-1 rounded-lg bg-slate-50">
+                    <span class="flex items-center gap-1.5 text-slate-600 truncate">
+                        <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${colors[i]}"></span>
+                        <span class="truncate">${lbl}</span>
+                    </span>
+                    <span class="font-bold text-slate-800">${counts[i]}</span>
+                </div>
+            `).join('');
+
+            if (typeof Chart === 'undefined' || !canvas) return;
+            if (statusChartInstance) statusChartInstance.destroy();
+
+            const hasData = counts.some(c => c > 0);
+            statusChartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: hasData ? labels : ['Belum Ada Data'],
+                    datasets: [{
+                        data: hasData ? counts : [1],
+                        backgroundColor: hasData ? colors : ['#e2e8f0'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '68%',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // ==================== TABEL & CRUD DATA SERVICE ====================
+        function updateTechnicianFilterOptions() {
+            const select = document.getElementById('filter-tech');
+            const currentVal = select.value;
+            const techs = [...new Set(servicesData.map(s => (s.technician || '').trim()).filter(Boolean))];
+            select.innerHTML = `<option value="ALL">Semua Teknisi</option>` +
+                techs.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+            if (techs.includes(currentVal)) select.value = currentVal;
+        }
+
+        function renderServicesTable() {
+            renderCashAndExpenses();
+            updateTechnicianFilterOptions();
+            const q = (document.getElementById('search-service').value || '').toLowerCase().trim();
+            const statusFilter = document.getElementById('filter-status').value;
+            const techFilter = document.getElementById('filter-tech').value;
+
+            const filtered = servicesData.filter(item => {
+                const matchQuery = !q ||
+                    (item.nota || '').toLowerCase().includes(q) ||
+                    (item.customer || '').toLowerCase().includes(q) ||
+                    (item.device || '').toLowerCase().includes(q) ||
+                    (item.imei || '').toLowerCase().includes(q) ||
+                    (item.phone || '').toLowerCase().includes(q);
+                const matchStatus = statusFilter === 'ALL' || item.status === statusFilter;
+                const matchTech = techFilter === 'ALL' || (item.technician || '').trim() === techFilter;
+                return matchQuery && matchStatus && matchTech;
+            });
+
+            const tbody = document.getElementById('services-table-body');
+            const emptyState = document.getElementById('services-empty-state');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            tbody.innerHTML = filtered.map(item => {
+                const profit = (Number(item.totalPrice) || 0) - (Number(item.partsCost) || 0);
+                return `
+                    <tr class="hover:bg-slate-50/90 transition">
+                        <td class="py-3.5 px-4 align-top">
+                            <div class="font-mono text-xs font-bold text-blue-600">${escapeHtml(item.nota)}</div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(item.date)}</div>
+                        </td>
+                        <td class="py-3.5 px-4 align-top">
+                            <div class="font-semibold text-slate-900">${escapeHtml(item.customer)}</div>
+                            <button type="button" data-action="wa" data-id="${escapeHtml(item.id)}" class="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 hover:underline cursor-pointer">
+                                WA: ${escapeHtml(item.phone)}
+                            </button>
+                        </td>
+                        <td class="py-3.5 px-4 align-top">
+                            <div class="font-semibold text-slate-800">${escapeHtml(item.device)}</div>
+                            <div class="text-xs text-slate-500 max-w-xs">${escapeHtml(item.issue)}</div>
+                            ${item.imei ? `<div class="text-[10px] font-mono text-slate-400 mt-0.5">IMEI: ${escapeHtml(item.imei)}</div>` : ''}
+                        </td>
+                        <td class="py-3.5 px-4 align-top text-xs font-medium text-slate-700">${escapeHtml(item.technician || '-')}</td>
+                        <td class="py-3.5 px-4 align-top">
+                            <div class="font-bold text-slate-900">${formatRupiah(item.totalPrice)}</div>
+                            <div class="text-[11px] text-emerald-600 font-medium">Laba: ${formatRupiah(profit)}</div>
+                        </td>
+                        <td class="py-3.5 px-4 align-top">${getStatusBadgeHtml(item.status)}</td>
+                        <td class="py-3.5 px-4 align-top text-right whitespace-nowrap">
+                            <div class="inline-flex items-center gap-1">
+                                <button type="button" data-action="nota" data-id="${escapeHtml(item.id)}" title="Cetak Nota" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 text-xs font-semibold transition cursor-pointer">Nota</button>
+                                <button type="button" data-action="edit" data-id="${escapeHtml(item.id)}" title="Edit" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-600 text-xs font-semibold transition cursor-pointer">Edit</button>
+                                <button type="button" data-action="delete" data-id="${escapeHtml(item.id)}" title="Hapus" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition cursor-pointer">Hapus</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ==================== UANG KAS, PEMASUKAN & PENGELUARAN KAS ====================
+        function renderCashAndExpenses() {
+            const initialCash = Number(storeProfile && storeProfile.initialCash) || 0;
+            const totalCashInRecords = cashInData.reduce((sum, ci) => sum + (Number(ci.amount) || 0), 0);
+            const totalCashOut = expensesData.reduce((sum, ex) => sum + (Number(ex.amount) || 0), 0);
+            const remainingCash = initialCash + totalCashInRecords - totalCashOut;
+
+            document.getElementById('kas-initial-val').textContent = formatRupiah(initialCash);
+            document.getElementById('kas-total-in').textContent = formatRupiah(totalCashInRecords);
+            const breakdownEl = document.getElementById('kas-initial-breakdown');
+            if (breakdownEl) {
+                breakdownEl.textContent = `${cashInData.length} catatan pemasukan kas`;
+            }
+            document.getElementById('kas-total-out').textContent = formatRupiah(totalCashOut);
+            document.getElementById('kas-balance').textContent = formatRupiah(remainingCash);
+
+            // Render Tabel Pemasukan Uang Kas
+            document.getElementById('cashin-count-badge').textContent = `${cashInData.length} Catatan`;
+            const cinBody = document.getElementById('cashin-table-body');
+            const cinEmpty = document.getElementById('cashin-empty-state');
+
+            if (cashInData.length === 0) {
+                cinBody.innerHTML = '';
+                cinEmpty.classList.remove('hidden');
+            } else {
+                cinEmpty.classList.add('hidden');
+                cinBody.innerHTML = cashInData.map(ci => `
+                    <tr class="hover:bg-slate-50/90 transition">
+                        <td class="py-2.5 px-3 text-xs font-mono text-slate-600 whitespace-nowrap">${escapeHtml(ci.date)}</td>
+                        <td class="py-2.5 px-3">
+                            <span class="inline-flex px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-emerald-50 text-emerald-700">${escapeHtml(ci.category)}</span>
+                        </td>
+                        <td class="py-2.5 px-3 text-xs text-slate-800">${escapeHtml(ci.note)}</td>
+                        <td class="py-2.5 px-3 text-right font-bold text-emerald-600 whitespace-nowrap">+ ${formatRupiah(ci.amount)}</td>
+                        <td class="py-2.5 px-3 text-right">
+                            <button type="button" data-cin-delete="${escapeHtml(ci.id)}" class="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-[11px] font-semibold transition cursor-pointer">Hapus</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            // Render Tabel Pengeluaran Uang Kas
+            document.getElementById('expense-count-badge').textContent = `${expensesData.length} Catatan`;
+            const tbody = document.getElementById('expenses-table-body');
+            const emptyState = document.getElementById('expenses-empty-state');
+
+            if (expensesData.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                tbody.innerHTML = expensesData.map(ex => `
+                    <tr class="hover:bg-slate-50/90 transition">
+                        <td class="py-2.5 px-3 text-xs font-mono text-slate-600 whitespace-nowrap">${escapeHtml(ex.date)}</td>
+                        <td class="py-2.5 px-3">
+                            <span class="inline-flex px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700">${escapeHtml(ex.category)}</span>
+                        </td>
+                        <td class="py-2.5 px-3 text-xs text-slate-800">${escapeHtml(ex.note)}</td>
+                        <td class="py-2.5 px-3 text-right font-bold text-rose-600 whitespace-nowrap">- ${formatRupiah(ex.amount)}</td>
+                        <td class="py-2.5 px-3 text-right">
+                            <button type="button" data-exp-delete="${escapeHtml(ex.id)}" class="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-[11px] font-semibold transition cursor-pointer">Hapus</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function openCashInModal() {
+            document.getElementById('cashin-form').reset();
+            document.getElementById('cin-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('cashin-modal').classList.remove('hidden');
+        }
+
+        function closeCashInModal() {
+            document.getElementById('cashin-modal').classList.add('hidden');
+        }
+
+        function handleCashInFormSubmit(e) {
+            e.preventDefault();
+            const amount = Number(document.getElementById('cin-amount').value) || 0;
+            if (amount <= 0) {
+                showToast('Masukkan nominal pemasukan kas yang valid.');
+                return;
+            }
+
+            const newCashIn = {
+                id: 'CIN-' + Date.now(),
+                date: document.getElementById('cin-date').value || new Date().toISOString().split('T')[0],
+                category: document.getElementById('cin-category').value,
+                note: document.getElementById('cin-note').value.trim(),
+                amount: amount
+            };
+
+            cashInData.unshift(newCashIn);
+            closeCashInModal();
+            renderCashAndExpenses();
+            syncToOnlineDatabase(() => {
+                showToast('Pemasukan uang kas berhasil dicatat!');
+            });
+        }
+
+        function openExpenseModal() {
+            document.getElementById('expense-form').reset();
+            document.getElementById('exp-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('expense-modal').classList.remove('hidden');
+        }
+
+        function closeExpenseModal() {
+            document.getElementById('expense-modal').classList.add('hidden');
+        }
+
+        function handleExpenseFormSubmit(e) {
+            e.preventDefault();
+            const amount = Number(document.getElementById('exp-amount').value) || 0;
+            if (amount <= 0) {
+                showToast('Masukkan nominal pengeluaran yang valid.');
+                return;
+            }
+
+            const newExpense = {
+                id: 'EXP-' + Date.now(),
+                date: document.getElementById('exp-date').value || new Date().toISOString().split('T')[0],
+                category: document.getElementById('exp-category').value,
+                note: document.getElementById('exp-note').value.trim(),
+                amount: amount
+            };
+
+            expensesData.unshift(newExpense);
+            closeExpenseModal();
+            renderCashAndExpenses();
+            syncToOnlineDatabase(() => {
+                showToast('Pengeluaran uang kas berhasil dicatat!');
+            });
+        }
+
+        function openInitialCashModal() {
+            const currentVal = Number(storeProfile && storeProfile.initialCash) || 0;
+            document.getElementById('input-initial-cash').value = currentVal;
+            document.getElementById('initial-cash-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('input-initial-cash').focus(), 50);
+        }
+
+        function closeInitialCashModal() {
+            document.getElementById('initial-cash-modal').classList.add('hidden');
+        }
+
+        function handleInitialCashSubmit(e) {
+            e.preventDefault();
+            const val = Math.max(0, Number(document.getElementById('input-initial-cash').value) || 0);
+            storeProfile = {
+                ...(storeProfile || {}),
+                initialCash: val
+            };
+            closeInitialCashModal();
+            renderCashAndExpenses();
+            syncToOnlineDatabase(() => {
+                showToast('Nominal uang kas awal disimpan ke database!');
+            });
+        }
+
+        function generateNextNotaNumber() {
+            const now = new Date();
+            const yymm = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0');
+            const seq = String(servicesData.length + 1).padStart(3, '0');
+            return `SRV-${yymm}-${seq}`;
+        }
+
+        function updateProfitPreview() {
+            const parts = Number(document.getElementById('srv-parts').value) || 0;
+            const total = Number(document.getElementById('srv-total').value) || 0;
+            document.getElementById('srv-profit-preview').textContent = formatRupiah(total - parts);
+        }
+
+        function openServiceModal(serviceObj) {
+            const modal = document.getElementById('service-modal');
+            const form = document.getElementById('service-form');
+            form.reset();
+
+            if (serviceObj) {
+                document.getElementById('service-modal-title').textContent = 'Edit Data Service';
+                document.getElementById('srv-id').value = serviceObj.id;
+                document.getElementById('srv-nota').value = serviceObj.nota;
+                document.getElementById('srv-date').value = serviceObj.date;
+                document.getElementById('srv-customer').value = serviceObj.customer;
+                document.getElementById('srv-phone').value = serviceObj.phone;
+                document.getElementById('srv-device').value = serviceObj.device;
+                document.getElementById('srv-imei').value = serviceObj.imei || '';
+                document.getElementById('srv-issue').value = serviceObj.issue;
+                document.getElementById('srv-tech').value = serviceObj.technician || '';
+                document.getElementById('srv-status').value = serviceObj.status || 'Antrian';
+                document.getElementById('srv-parts').value = serviceObj.partsCost || 0;
+                document.getElementById('srv-total').value = serviceObj.totalPrice || 0;
+
+                const accList = Array.isArray(serviceObj.accessories) ? serviceObj.accessories : [];
+                document.querySelectorAll('.acc-checkbox').forEach(cb => {
+                    cb.checked = accList.includes(cb.value);
+                });
+            } else {
+                document.getElementById('service-modal-title').textContent = 'Tambah Data Service Baru';
+                document.getElementById('srv-id').value = '';
+                document.getElementById('srv-nota').value = generateNextNotaNumber();
+                document.getElementById('srv-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('srv-status').value = 'Antrian';
+                document.getElementById('srv-parts').value = 0;
+                document.getElementById('srv-total').value = 0;
+                document.querySelectorAll('.acc-checkbox').forEach(cb => {
+                    cb.checked = ['Unit HP', 'Baterai'].includes(cb.value);
+                });
+            }
+
+            updateProfitPreview();
+            modal.classList.remove('hidden');
+        }
+
+        function closeServiceModal() {
+            document.getElementById('service-modal').classList.add('hidden');
+        }
+
+        function handleServiceFormSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('srv-id').value;
+            const accessories = Array.from(document.querySelectorAll('.acc-checkbox:checked')).map(cb => cb.value);
+
+            const record = {
+                id: id || 'SRV-' + Date.now(),
+                nota: document.getElementById('srv-nota').value.trim(),
+                date: document.getElementById('srv-date').value,
+                customer: document.getElementById('srv-customer').value.trim(),
+                phone: document.getElementById('srv-phone').value.trim(),
+                device: document.getElementById('srv-device').value.trim(),
+                imei: document.getElementById('srv-imei').value.trim(),
+                accessories: accessories.length > 0 ? accessories : ['Unit HP'],
+                issue: document.getElementById('srv-issue').value.trim(),
+                technician: document.getElementById('srv-tech').value.trim() || 'Teknisi',
+                status: document.getElementById('srv-status').value,
+                partsCost: Number(document.getElementById('srv-parts').value) || 0,
+                totalPrice: Number(document.getElementById('srv-total').value) || 0
+            };
+
+            if (id) {
+                const idx = servicesData.findIndex(s => s.id === id);
+                if (idx !== -1) servicesData[idx] = record;
+                showToast('Data service berhasil diperbarui!');
+            } else {
+                servicesData.unshift(record);
+                showToast('Data service baru berhasil ditambahkan!');
+            }
+
+            closeServiceModal();
+            renderDashboard();
+            renderServicesTable();
+            syncToOnlineDatabase();
+        }
+
+        // ==================== NOTA & WHATSAPP ====================
+        function openNotaModal(serviceId) {
+            const item = servicesData.find(s => s.id === serviceId);
+            if (!item) return;
+            currentNotaService = item;
+
+            const p = storeProfile || {};
+            document.getElementById('nota-doc-store').textContent = p.name || 'TOKO SERVICE HP';
+            document.getElementById('nota-doc-tagline').textContent = p.tagline || '';
+            document.getElementById('nota-doc-address').textContent = p.address || '';
+            document.getElementById('nota-doc-phone').textContent = p.phone ? 'WA: ' + p.phone : '';
+
+            document.getElementById('nota-doc-number').textContent = item.nota;
+            document.getElementById('nota-doc-date').textContent = item.date;
+            document.getElementById('nota-doc-customer').textContent = item.customer;
+            document.getElementById('nota-doc-custphone').textContent = item.phone;
+            document.getElementById('nota-doc-device').textContent = item.device;
+            document.getElementById('nota-doc-imei').textContent = item.imei || '-';
+            document.getElementById('nota-doc-tech').textContent = item.technician || '-';
+            document.getElementById('nota-doc-status').textContent = item.status;
+            document.getElementById('nota-doc-acc').textContent = Array.isArray(item.accessories) ? item.accessories.join(', ') : 'Unit HP';
+            document.getElementById('nota-doc-issue').textContent = item.issue;
+            document.getElementById('nota-doc-total').textContent = formatRupiah(item.totalPrice);
+            document.getElementById('nota-doc-terms').textContent = p.terms || 'Terima kasih atas kepercayaan Anda.';
+
+            document.getElementById('nota-modal').classList.remove('hidden');
+        }
+
+        function closeNotaModal() {
+            document.getElementById('nota-modal').classList.add('hidden');
+            currentNotaService = null;
+        }
+
+        function sendWhatsAppUpdate(service) {
+            if (!service) return;
+            let rawPhone = String(service.phone || '').replace(/[^0-9]/g, '');
+            if (rawPhone.startsWith('0')) rawPhone = '62' + rawPhone.slice(1);
+            if (!rawPhone) {
+                showToast('Nomor WhatsApp pelanggan tidak valid.');
+                return;
+            }
+
+            const storeName = (storeProfile && storeProfile.name) || 'Konter Service HP';
+            const message =
+                `Halo Kak *${service.customer}*,\n` +
+                `Berikut informasi update service perangkat Anda di *${storeName}*:\n\n` +
+                `• *No. Nota:* ${service.nota}\n` +
+                `• *Perangkat:* ${service.device}\n` +
+                `• *Keluhan/Tindakan:* ${service.issue}\n` +
+                `• *Status Saat Ini:* *${service.status}*\n` +
+                `• *Total Biaya:* ${formatRupiah(service.totalPrice)}\n\n` +
+                `Terima kasih telah mempercayakan perbaikan perangkat Anda kepada kami.`;
+
+            const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(message)}`;
+            window.open(waUrl, '_blank', 'noopener,noreferrer');
+        }
+
+        // ==================== LAPORAN KEUANGAN, KAS & CSV ====================
+        function renderReports() {
+            const monthVal = document.getElementById('report-month-filter').value;
+            const filtered = servicesData.filter(s => {
+                if (s.status === 'Batal') return false;
+                if (!monthVal) return true;
+                return (s.date || '').startsWith(monthVal);
+            });
+
+            const count = filtered.length;
+            const revenue = filtered.reduce((sum, s) => sum + (Number(s.totalPrice) || 0), 0);
+            const parts = filtered.reduce((sum, s) => sum + (Number(s.partsCost) || 0), 0);
+            const profit = revenue - parts;
+
+            document.getElementById('rep-count').textContent = count;
+            document.getElementById('rep-revenue').textContent = formatRupiah(revenue);
+            document.getElementById('rep-parts').textContent = formatRupiah(parts);
+            document.getElementById('rep-profit').textContent = formatRupiah(profit);
+
+            renderFinanceChart(revenue, parts, profit);
+
+            const techMap = {};
+            filtered.forEach(s => {
+                const name = (s.technician || 'Tanpa Nama').trim();
+                if (!techMap[name]) techMap[name] = { count: 0, profit: 0 };
+                techMap[name].count += 1;
+                techMap[name].profit += (Number(s.totalPrice) || 0) - (Number(s.partsCost) || 0);
+            });
+
+            const techRows = Object.entries(techMap).sort((a, b) => b[1].profit - a[1].profit);
+            const techBody = document.getElementById('tech-report-body');
+            if (techRows.length === 0) {
+                techBody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400 text-xs">Tidak ada data pada periode ini.</td></tr>`;
+            } else {
+                techBody.innerHTML = techRows.map(([name, stat]) => `
+                    <tr>
+                        <td class="py-2.5 px-2 font-semibold text-slate-800">${escapeHtml(name)}</td>
+                        <td class="py-2.5 px-2 text-center font-medium text-slate-600">${stat.count}</td>
+                        <td class="py-2.5 px-2 text-right font-bold text-emerald-600">${formatRupiah(stat.profit)}</td>
+                    </tr>
+                `).join('');
+            }
+
+            // Render Laporan Pemasukan & Pengeluaran Uang Kas
+            const filteredCashIn = cashInData.filter(ci => !monthVal || (ci.date || '').startsWith(monthVal));
+            const filteredExpenses = expensesData.filter(ex => !monthVal || (ex.date || '').startsWith(monthVal));
+
+            const initialCash = Number(storeProfile && storeProfile.initialCash) || 0;
+            const periodCashIn = filteredCashIn.reduce((sum, ci) => sum + (Number(ci.amount) || 0), 0);
+            const periodExpense = filteredExpenses.reduce((sum, ex) => sum + (Number(ex.amount) || 0), 0);
+            const totalAllCashIn = cashInData.reduce((sum, ci) => sum + (Number(ci.amount) || 0), 0);
+            const totalAllExpense = expensesData.reduce((sum, ex) => sum + (Number(ex.amount) || 0), 0);
+            const currentKasBalance = initialCash + totalAllCashIn - totalAllExpense;
+
+            document.getElementById('rep-kas-initial').textContent = formatRupiah(initialCash);
+            document.getElementById('rep-kas-in').textContent = formatRupiah(periodCashIn);
+            document.getElementById('rep-kas-out').textContent = formatRupiah(periodExpense);
+            document.getElementById('rep-kas-balance').textContent = formatRupiah(currentKasBalance);
+
+            document.getElementById('rep-cashin-count').textContent = `${filteredCashIn.length} item`;
+            const repCinBody = document.getElementById('rep-cashin-body');
+            if (filteredCashIn.length === 0) {
+                repCinBody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">Tidak ada pemasukan kas pada periode ini.</td></tr>`;
+            } else {
+                repCinBody.innerHTML = filteredCashIn.map(ci => `
+                    <tr>
+                        <td class="py-2 px-3 font-mono text-slate-600 whitespace-nowrap">${escapeHtml(ci.date)}</td>
+                        <td class="py-2 px-3 font-medium text-slate-700">${escapeHtml(ci.category)}</td>
+                        <td class="py-2 px-3 text-slate-700">${escapeHtml(ci.note)}</td>
+                        <td class="py-2 px-3 text-right font-bold text-emerald-600 whitespace-nowrap">+ ${formatRupiah(ci.amount)}</td>
+                    </tr>
+                `).join('');
+            }
+
+            document.getElementById('rep-expense-count').textContent = `${filteredExpenses.length} item`;
+            const repExpBody = document.getElementById('rep-expense-body');
+            if (filteredExpenses.length === 0) {
+                repExpBody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">Tidak ada pengeluaran kas pada periode ini.</td></tr>`;
+            } else {
+                repExpBody.innerHTML = filteredExpenses.map(ex => `
+                    <tr>
+                        <td class="py-2 px-3 font-mono text-slate-600 whitespace-nowrap">${escapeHtml(ex.date)}</td>
+                        <td class="py-2 px-3 font-medium text-slate-700">${escapeHtml(ex.category)}</td>
+                        <td class="py-2 px-3 text-slate-700">${escapeHtml(ex.note)}</td>
+                        <td class="py-2 px-3 text-right font-bold text-rose-600 whitespace-nowrap">- ${formatRupiah(ex.amount)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function exportCashReportToCsv() {
+            const monthVal = document.getElementById('report-month-filter').value;
+            const filteredCashIn = cashInData.filter(ci => !monthVal || (ci.date || '').startsWith(monthVal));
+            const filteredExpenses = expensesData.filter(ex => !monthVal || (ex.date || '').startsWith(monthVal));
+
+            if (filteredCashIn.length === 0 && filteredExpenses.length === 0) {
+                showToast('Belum ada data pemasukan atau pengeluaran kas pada periode ini.');
+                return;
+            }
+
+            const headers = ['Jenis Arus Kas', 'Tanggal', 'Kategori', 'Keterangan', 'Nominal'];
+            const rows = [
+                ...filteredCashIn.map(ci => ['Pemasukan Kas', ci.date, ci.category, ci.note, ci.amount || 0]),
+                ...filteredExpenses.map(ex => ['Pengeluaran Kas', ex.date, ex.category, ex.note, -(Number(ex.amount) || 0)])
+            ].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+
+            const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Laporan-Uang-Kas-${monthVal || new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Laporan Pemasukan & Pengeluaran Kas (CSV) diunduh!');
+        }
+
+        function renderFinanceChart(revenue, parts, profit) {
+            const canvas = document.getElementById('financeChart');
+            if (typeof Chart === 'undefined' || !canvas) return;
+            if (financeChartInstance) financeChartInstance.destroy();
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const tickColor = isDark ? '#94a3b8' : '#475569';
+
+            financeChartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Total Omzet', 'Modal Sparepart', 'Laba Bersih'],
+                    datasets: [{
+                        label: 'Nominal (Rp)',
+                        data: [revenue, parts, profit],
+                        backgroundColor: ['#2563eb', '#f43f5e', '#10b981'],
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: tickColor } },
+                        y: { beginAtZero: true, ticks: { color: tickColor } }
+                    }
+                }
+            });
+        }
+
+        function exportReportToCsv() {
+            if (servicesData.length === 0) {
+                showToast('Belum ada data untuk diekspor.');
+                return;
+            }
+
+            const headers = ['No Nota', 'Tanggal', 'Pelanggan', 'WhatsApp', 'Perangkat', 'IMEI', 'Kelengkapan', 'Keluhan', 'Teknisi', 'Modal Part', 'Total Biaya', 'Laba Bersih', 'Status'];
+            const rows = servicesData.map(s => {
+                const profit = (Number(s.totalPrice) || 0) - (Number(s.partsCost) || 0);
+                return [
+                    s.nota,
+                    s.date,
+                    s.customer,
+                    s.phone,
+                    s.device,
+                    s.imei || '',
+                    Array.isArray(s.accessories) ? s.accessories.join('; ') : '',
+                    s.issue,
+                    s.technician,
+                    s.partsCost || 0,
+                    s.totalPrice || 0,
+                    profit,
+                    s.status
+                ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+            });
+
+            const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Laporan-Service-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('File Excel (CSV) berhasil diunduh!');
+        }
+
+        // ==================== PROFIL TOKO & UPLOAD FOTO ====================
+        function populateProfileForm() {
+            const p = storeProfile || {};
+            document.getElementById('prof-name').value = p.name || '';
+            document.getElementById('prof-tagline').value = p.tagline || '';
+            document.getElementById('prof-phone').value = p.phone || '';
+            document.getElementById('prof-admin').value = p.adminName || '';
+            document.getElementById('prof-address').value = p.address || '';
+            document.getElementById('prof-terms').value = p.terms || '';
+            document.getElementById('prof-pin').value = p.pin || '';
+            document.getElementById('prof-webapp-url').value = webAppUrl || '';
+            updateProfileLivePreview();
+        }
+
+        function updateProfileLivePreview() {
+            const name = document.getElementById('prof-name').value.trim() || (storeProfile && storeProfile.name) || 'Nama Toko Anda';
+            const tagline = document.getElementById('prof-tagline').value.trim() || 'Slogan Toko Anda';
+            const phone = document.getElementById('prof-phone').value.trim() || '-';
+            const adminName = document.getElementById('prof-admin').value.trim() || '-';
+            const photo = (storeProfile && storeProfile.photoUrl) || '';
+
+            document.getElementById('prof-hero-name').textContent = name;
+            document.getElementById('prof-hero-tagline').textContent = tagline;
+            document.getElementById('prof-hero-admin').textContent = 'Admin: ' + adminName;
+            document.getElementById('prof-hero-phone').textContent = 'WA: ' + phone;
+
+            setAvatarImageState(
+                document.getElementById('prof-avatar-preview'),
+                document.getElementById('prof-avatar-placeholder'),
+                photo
+            );
+        }
+
+        function handleProfileFormSubmit(e) {
+            e.preventDefault();
+            const pinVal = normalizePinValue(document.getElementById('prof-pin').value);
+            if (!/^[0-9]{4,6}$/.test(pinVal)) {
+                showToast('PIN harus terdiri dari 4 hingga 6 digit angka.');
+                return;
+            }
+
+            webAppUrl = document.getElementById('prof-webapp-url').value.trim();
+            storeProfile = {
+                ...(storeProfile || {}),
+                name: document.getElementById('prof-name').value.trim(),
+                tagline: document.getElementById('prof-tagline').value.trim(),
+                phone: document.getElementById('prof-phone').value.trim(),
+                adminName: document.getElementById('prof-admin').value.trim(),
+                address: document.getElementById('prof-address').value.trim(),
+                terms: document.getElementById('prof-terms').value.trim(),
+                pin: pinVal
+            };
+
+            applyStoreIdentityToUI();
+            updateProfileLivePreview();
+            syncToOnlineDatabase(() => {
+                showToast('Profil toko berhasil disimpan!');
+            });
+        }
+
+        // ==================== EVENT LISTENERS & INISIALISASI ====================
+        function enterAppWorkspace() {
+            document.getElementById('onboarding-screen').classList.add('hidden');
+            document.getElementById('pin-lock-screen').classList.add('hidden');
+            document.getElementById('app-workspace').classList.remove('hidden');
+            document.getElementById('bottom-nav-bar').classList.remove('hidden');
+
+            applyStoreIdentityToUI();
+            switchTab('dashboard');
+        }
+
+        function showPinScreen() {
+            enteredPin = '';
+            updatePinDots();
+            applyStoreIdentityToUI();
+            document.getElementById('onboarding-screen').classList.add('hidden');
+            document.getElementById('app-workspace').classList.add('hidden');
+            document.getElementById('bottom-nav-bar').classList.add('hidden');
+            document.getElementById('pin-lock-screen').classList.remove('hidden');
+        }
+
+        function showOnboardingScreen() {
+            document.getElementById('pin-lock-screen').classList.add('hidden');
+            document.getElementById('app-workspace').classList.add('hidden');
+            document.getElementById('bottom-nav-bar').classList.add('hidden');
+            document.getElementById('onboarding-screen').classList.remove('hidden');
+        }
+
+        function bindAllEvents() {
+            // Tombol mode gelap / terang
+            document.querySelectorAll('.btn-theme-toggle').forEach(btn => {
+                btn.addEventListener('click', toggleTheme);
+            });
+
+            // Tab onboarding
+            document.getElementById('tab-onboard-new').addEventListener('click', () => {
+                document.getElementById('tab-onboard-new').classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+                document.getElementById('tab-onboard-new').classList.remove('text-slate-600');
+                document.getElementById('tab-onboard-connect').classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
+                document.getElementById('tab-onboard-connect').classList.add('text-slate-600');
+                document.getElementById('form-register-store').classList.remove('hidden');
+                document.getElementById('form-connect-existing').classList.add('hidden');
+            });
+
+            document.getElementById('tab-onboard-connect').addEventListener('click', () => {
+                document.getElementById('tab-onboard-connect').classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+                document.getElementById('tab-onboard-connect').classList.remove('text-slate-600');
+                document.getElementById('tab-onboard-new').classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
+                document.getElementById('tab-onboard-new').classList.add('text-slate-600');
+                document.getElementById('form-connect-existing').classList.remove('hidden');
+                document.getElementById('form-register-store').classList.add('hidden');
+            });
+
+            // Form pendaftaran toko baru
+            document.getElementById('form-register-store').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const pinVal = normalizePinValue(document.getElementById('reg-pin').value);
+                if (!/^[0-9]{4,6}$/.test(pinVal)) {
+                    showToast('PIN harus 4-6 digit angka.');
+                    return;
+                }
+
+                webAppUrl = document.getElementById('reg-url').value.trim();
+                storeProfile = {
+                    name: document.getElementById('reg-name').value.trim(),
+                    pin: pinVal,
+                    phone: document.getElementById('reg-phone').value.trim(),
+                    adminName: document.getElementById('reg-admin').value.trim() || 'Admin',
+                    tagline: document.getElementById('reg-tagline').value.trim() || 'Spesialis Service HP & Sparepart Bergaransi',
+                    address: document.getElementById('reg-address').value.trim(),
+                    terms: '1. Garansi service 14 hari untuk kerusakan yang sama.\n2. Barang yang tidak diambil lebih dari 30 hari di luar tanggung jawab kami.',
+                    initialCash: 0,
+                    photoUrl: ''
+                };
+
+                safeSessionSet(SESSION_UNLOCKED_KEY, '1');
+                enterAppWorkspace();
+                syncToOnlineDatabase(() => {
+                    showToast('Toko berhasil didaftarkan!');
+                });
+            });
+
+            // Form hubungkan link database yang sudah ada
+            document.getElementById('form-connect-existing').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const urlInput = document.getElementById('connect-url').value.trim();
+                const submitBtn = document.getElementById('btn-connect-submit');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Menghubungkan...';
+
+                pullFromOnlineDatabase(urlInput, (ok) => {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Tarik Data Toko dari Google Sheets';
+
+                    if (ok && storeProfile && storeProfile.name) {
+                        if (storeProfile.pin) {
+                            safeSessionRemove(SESSION_UNLOCKED_KEY);
+                            showPinScreen();
+                            showToast('Data toko berhasil ditarik! Silakan masukkan PIN toko.');
+                        } else {
+                            safeSessionSet(SESSION_UNLOCKED_KEY, '1');
+                            enterAppWorkspace();
+                            showToast('Data toko berhasil ditarik dari Google Sheets!');
+                        }
+                    } else {
+                        showToast('Gagal menghubungkan link database. Pastikan URL Web App valid.');
+                    }
+                });
+            });
+
+            // Keypad PIN anti-dobel (single pointerup / click handler dengan debounce)
+            const pinGrid = document.getElementById('pin-keypad-grid');
+            let lastPinPressAt = 0;
+
+            function handlePinButtonClick(e) {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                if (e.cancelable) e.preventDefault();
+
+                const now = Date.now();
+                if (now - lastPinPressAt < 180) return;
+                lastPinPressAt = now;
+
+                btn.classList.add('pin-key-pressed');
+                setTimeout(() => btn.classList.remove('pin-key-pressed'), 120);
+
+                const digit = btn.getAttribute('data-key');
+                const action = btn.getAttribute('data-pin-action');
+
+                if (digit !== null) {
+                    handlePinDigit(digit);
+                } else if (action === 'clear') {
+                    clearPinInput();
+                } else if (action === 'backspace') {
+                    backspacePinInput();
+                }
+            }
+
+            if (window.PointerEvent) {
+                pinGrid.addEventListener('pointerup', handlePinButtonClick);
+            } else {
+                pinGrid.addEventListener('click', handlePinButtonClick);
+            }
+
+            document.addEventListener('keydown', (e) => {
+                const pinScreen = document.getElementById('pin-lock-screen');
+                if (!pinScreen || pinScreen.classList.contains('hidden')) return;
+                if (/^[0-9]$/.test(e.key)) {
+                    handlePinDigit(e.key);
+                } else if (e.key === 'Backspace') {
+                    backspacePinInput();
+                } else if (e.key === 'Escape') {
+                    clearPinInput();
+                }
+            });
+
+            document.getElementById('btn-reset-onboarding').addEventListener('click', () => {
+                openConfirmModal('Ganti Toko / Database', 'Anda akan kembali ke layar pengaturan awal toko. Lanjutkan?', () => {
+                    closeConfirmModal();
+                    safeSessionRemove(SESSION_UNLOCKED_KEY);
+                    showOnboardingScreen();
+                });
+            });
+
+            // Header aksi
+            document.getElementById('btn-lock-app').addEventListener('click', () => {
+                safeSessionRemove(SESSION_UNLOCKED_KEY);
+                showPinScreen();
+            });
+
+            document.getElementById('btn-sync-now').addEventListener('click', () => {
+                pullFromOnlineDatabase(webAppUrl, (ok) => {
+                    if (ok) {
+                        applyStoreIdentityToUI();
+                        renderDashboard();
+                        renderServicesTable();
+                        showToast('Data berhasil disinkronkan dengan Google Sheets!');
+                    } else {
+                        syncToOnlineDatabase(() => showToast('Sinkronisasi selesai.'));
+                    }
+                });
+            });
+
+            // Bottom Navigation Bar
+            document.getElementById('bottom-nav-bar').addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-tab]');
+                if (!btn) return;
+                switchTab(btn.getAttribute('data-tab'));
+            });
+
+            // Pintasan Dashboard
+            document.getElementById('btn-dash-add').addEventListener('click', () => openServiceModal(null));
+            document.getElementById('btn-dash-all').addEventListener('click', () => switchTab('services'));
+
+            // Data Service, Kas Awal, Pemasukan Kas & Pengeluaran Kas
+            document.getElementById('btn-set-initial-cash').addEventListener('click', openInitialCashModal);
+            document.getElementById('btn-close-initial-cash-modal').addEventListener('click', closeInitialCashModal);
+            document.getElementById('btn-cancel-initial-cash-modal').addEventListener('click', closeInitialCashModal);
+            document.getElementById('initial-cash-form').addEventListener('submit', handleInitialCashSubmit);
+
+            document.getElementById('btn-add-cash-in').addEventListener('click', openCashInModal);
+            document.getElementById('btn-close-cashin-modal').addEventListener('click', closeCashInModal);
+            document.getElementById('btn-cancel-cashin-modal').addEventListener('click', closeCashInModal);
+            document.getElementById('cashin-form').addEventListener('submit', handleCashInFormSubmit);
+
+            document.getElementById('cashin-table-body').addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-cin-delete]');
+                if (!btn) return;
+                const cinId = btn.getAttribute('data-cin-delete');
+                const cinItem = cashInData.find(x => x.id === cinId);
+                if (!cinItem) return;
+
+                openConfirmModal('Hapus Pemasukan Kas', `Hapus catatan pemasukan "${cinItem.note}" sebesar ${formatRupiah(cinItem.amount)}?`, () => {
+                    cashInData = cashInData.filter(x => x.id !== cinId);
+                    closeConfirmModal();
+                    renderCashAndExpenses();
+                    syncToOnlineDatabase(() => showToast('Catatan pemasukan kas dihapus.'));
+                });
+            });
+
+            document.getElementById('btn-add-expense').addEventListener('click', openExpenseModal);
+            document.getElementById('btn-close-expense-modal').addEventListener('click', closeExpenseModal);
+            document.getElementById('btn-cancel-expense-modal').addEventListener('click', closeExpenseModal);
+            document.getElementById('expense-form').addEventListener('submit', handleExpenseFormSubmit);
+
+            document.getElementById('expenses-table-body').addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-exp-delete]');
+                if (!btn) return;
+                const expId = btn.getAttribute('data-exp-delete');
+                const expItem = expensesData.find(x => x.id === expId);
+                if (!expItem) return;
+
+                openConfirmModal('Hapus Pengeluaran Kas', `Hapus catatan pengeluaran "${expItem.note}" sebesar ${formatRupiah(expItem.amount)}?`, () => {
+                    expensesData = expensesData.filter(x => x.id !== expId);
+                    closeConfirmModal();
+                    renderCashAndExpenses();
+                    syncToOnlineDatabase(() => showToast('Catatan pengeluaran kas dihapus.'));
+                });
+            });
+
+            document.getElementById('btn-add-service').addEventListener('click', () => openServiceModal(null));
+            document.getElementById('search-service').addEventListener('input', renderServicesTable);
+            document.getElementById('filter-status').addEventListener('change', renderServicesTable);
+            document.getElementById('filter-tech').addEventListener('change', renderServicesTable);
+
+            document.getElementById('services-table-body').addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-action]');
+                if (!btn) return;
+                const action = btn.getAttribute('data-action');
+                const id = btn.getAttribute('data-id');
+                const item = servicesData.find(s => s.id === id);
+                if (!item) return;
+
+                if (action === 'edit') {
+                    openServiceModal(item);
+                } else if (action === 'nota') {
+                    openNotaModal(id);
+                } else if (action === 'wa') {
+                    sendWhatsAppUpdate(item);
+                } else if (action === 'delete') {
+                    openConfirmModal('Hapus Data Service', `Hapus nota ${item.nota} milik ${item.customer}?`, () => {
+                        servicesData = servicesData.filter(s => s.id !== id);
+                        closeConfirmModal();
+                        renderDashboard();
+                        renderServicesTable();
+                        syncToOnlineDatabase(() => showToast('Data service dihapus.'));
+                    });
+                }
+            });
+
+            // Modal Service
+            document.getElementById('btn-close-service-modal').addEventListener('click', closeServiceModal);
+            document.getElementById('btn-cancel-service-modal').addEventListener('click', closeServiceModal);
+            document.getElementById('srv-parts').addEventListener('input', updateProfitPreview);
+            document.getElementById('srv-total').addEventListener('input', updateProfitPreview);
+            document.getElementById('service-form').addEventListener('submit', handleServiceFormSubmit);
+
+            // Modal Nota
+            document.getElementById('btn-close-nota-modal').addEventListener('click', closeNotaModal);
+            document.getElementById('btn-print-nota').addEventListener('click', () => window.print());
+            document.getElementById('btn-wa-from-nota').addEventListener('click', () => {
+                if (currentNotaService) sendWhatsAppUpdate(currentNotaService);
+            });
+
+            // Laporan
+            document.getElementById('report-month-filter').addEventListener('change', renderReports);
+            document.getElementById('btn-export-csv').addEventListener('click', exportReportToCsv);
+            document.getElementById('btn-export-cash-csv').addEventListener('click', exportCashReportToCsv);
+
+            // Profil Toko & Upload Foto
+            document.getElementById('btn-camera-upload').addEventListener('click', () => {
+                document.getElementById('prof-photo-file').click();
+            });
+            document.getElementById('btn-upload-photo-main').addEventListener('click', () => {
+                document.getElementById('prof-photo-file').click();
+            });
+            document.getElementById('prof-photo-file').addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    compressAndUploadPhoto(e.target.files[0]);
+                    e.target.value = '';
+                }
+            });
+            document.getElementById('btn-remove-photo').addEventListener('click', () => {
+                if (!storeProfile) return;
+                storeProfile.photoUrl = '';
+                applyStoreIdentityToUI();
+                updateProfileLivePreview();
+                syncToOnlineDatabase(() => showToast('Foto toko dihapus.'));
+            });
+
+            ['prof-name', 'prof-tagline', 'prof-phone', 'prof-admin'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateProfileLivePreview);
+            });
+
+            document.getElementById('form-store-profile').addEventListener('submit', handleProfileFormSubmit);
+            document.getElementById('btn-pull-server').addEventListener('click', () => {
+                const urlInput = document.getElementById('prof-webapp-url').value.trim();
+                pullFromOnlineDatabase(urlInput, (ok) => {
+                    if (ok) {
+                        applyStoreIdentityToUI();
+                        populateProfileForm();
+                        renderDashboard();
+                        showToast('Data berhasil ditarik dari server!');
+                    } else {
+                        showToast('Gagal menarik data dari server.');
+                    }
+                });
+            });
+
+            // Modal Konfirmasi
+            document.getElementById('btn-confirm-cancel').addEventListener('click', closeConfirmModal);
+            document.getElementById('btn-confirm-ok').addEventListener('click', () => {
+                if (typeof confirmCallback === 'function') confirmCallback();
+            });
+        }
+
+        function initApp() {
+            applyTheme(getPreferredTheme());
+            loadLocalCache();
+            bindAllEvents();
+
+            const unlocked = safeSessionGet(SESSION_UNLOCKED_KEY) === '1';
+
+            if (storeProfile && storeProfile.name) {
+                if (unlocked || !storeProfile.pin) {
+                    enterAppWorkspace();
+                } else {
+                    showPinScreen();
+                }
+                if (isGasEnvironment() || webAppUrl) {
+                    pullFromOnlineDatabase(webAppUrl, (ok) => {
+                        if (ok) {
+                            applyStoreIdentityToUI();
+                            if (!document.getElementById('app-workspace').classList.contains('hidden')) {
+                                renderDashboard();
+                                renderServicesTable();
+                            }
+                        }
+                    });
+                }
+            } else if (isGasEnvironment()) {
+                pullFromOnlineDatabase('', (ok) => {
+                    if (ok && storeProfile && storeProfile.name) {
+                        if (storeProfile.pin) showPinScreen();
+                        else enterAppWorkspace();
+                    } else {
+                        showOnboardingScreen();
+                    }
+                });
+            } else {
+                showOnboardingScreen();
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+</body>
+</html>
